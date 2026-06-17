@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SkyDiscover — How It Works + Demo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      line-height: 1.7;
+      
+      padding: 2rem 1rem;
+    }
+    .container { max-width: 900px; margin: 0 auto; }
+
+    /* ── Hero ── */
+    .hero {
+      text-align: center;
+      padding: 3rem 0 2.5rem;
+      border-bottom: 1px solid #2d3748;
+      margin-bottom: 2.5rem;
+    }
+    .hero h1 {
+      font-size: 2.8rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #63b3ed, #a78bfa, #f687b3);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.5rem;
+    }
+    .hero .tagline { font-size: 1.05rem; color: #94a3b8; max-width: 640px; margin: 0 auto 1rem; }
+    .pill {
+      display: inline-block;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      padding: 3px 12px;
+      color: #94a3b8;
+      margin: 0 3px;
+    }
+
+    /* ── Nav ── */
+    nav {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 2.5rem;
+      background: #1a2233;
+      border: 1px solid #2d3748;
+      border-radius: 10px;
+      padding: 0.7rem 1rem;
+    }
+    nav a {
+      color: #93c5fd;
+      text-decoration: none;
+      font-size: 0.88rem;
+      padding: 3px 10px;
+      border-radius: 6px;
+      transition: background 0.15s;
+    }
+    nav a:hover { background: #2d3748; }
+
+    /* ── Sections ── */
+    section { margin-bottom: 3rem; }
+    h2 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 1.1rem;
+      padding-bottom: 0.45rem;
+      border-bottom: 2px solid #334155;
+    }
+    h3 { font-size: 1rem; font-weight: 700; color: #cbd5e1; margin: 1.3rem 0 0.4rem; }
+
+    /* ── Loop diagram ── */
+    .loop {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0;
+      margin: 1.5rem 0;
+    }
+    .loop-box {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 0.7rem 1.1rem;
+      text-align: center;
+      min-width: 110px;
+    }
+    .loop-box .num {
+      font-size: 0.7rem;
+      color: #64748b;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    .loop-box .name {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #e2e8f0;
+    }
+    .loop-box .mod {
+      font-size: 0.72rem;
+      color: #64748b;
+      margin-top: 2px;
+      font-family: monospace;
+    }
+    .arrow {
+      color: #475569;
+      font-size: 1.4rem;
+      padding: 0 6px;
+      user-select: none;
+    }
+    .loop-return {
+      width: 100%;
+      text-align: center;
+      color: #475569;
+      font-size: 0.82rem;
+      margin-top: 0.5rem;
+    }
+
+    /* ── Component grid ── */
+    .comp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-top: 0.8rem; }
+    .comp {
+      background: #1a2233;
+      border: 1px solid #2d3748;
+      border-radius: 10px;
+      padding: 1.1rem 1.2rem;
+    }
+    .comp.blue  { border-top: 3px solid #3b82f6; }
+    .comp.purple{ border-top: 3px solid #8b5cf6; }
+    .comp.green { border-top: 3px solid #22c55e; }
+    .comp.pink  { border-top: 3px solid #ec4899; }
+    .comp.amber { border-top: 3px solid #f59e0b; }
+    .comp.teal  { border-top: 3px solid #14b8a6; }
+    .comp .ctitle { font-weight: 700; font-size: 0.95rem; color: #e2e8f0; margin-bottom: 0.25rem; }
+    .comp .cpath { font-size: 0.75rem; color: #64748b; font-family: monospace; margin-bottom: 0.5rem; }
+    .comp .cdesc { font-size: 0.86rem; color: #94a3b8; }
+    .comp ul { margin: 0.4rem 0 0 1rem; }
+    .comp ul li { font-size: 0.83rem; color: #94a3b8; margin-bottom: 2px; }
+
+    /* ── Algo cards ── */
+    .algo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.9rem; margin-top: 0.8rem; }
+    .algo {
+      background: #1a2233;
+      border: 1px solid #2d3748;
+      border-radius: 10px;
+      padding: 1rem 1.1rem;
+    }
+    .algo .atitle { font-weight: 700; color: #e2e8f0; font-size: 0.95rem; margin-bottom: 0.2rem; }
+    .algo .aflag { font-size: 0.76rem; color: #93c5fd; font-family: monospace; margin-bottom: 0.4rem; }
+    .algo .adesc { font-size: 0.84rem; color: #94a3b8; }
+
+    /* ── Steps ── */
+    .step {
+      display: flex;
+      gap: 1.2rem;
+      margin-bottom: 1.8rem;
+      align-items: flex-start;
+    }
+    .step-num {
+      flex-shrink: 0;
+      width: 2rem;
+      height: 2rem;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      color: #fff;
+      font-weight: 800;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 0.15rem;
+    }
+    .step-body { flex: 1; min-width: 0; }
+    .step-body .label { font-weight: 700; color: #e2e8f0; margin-bottom: 0.25rem; font-size: 1rem; }
+    .step-body .sub   { font-size: 0.87rem; color: #94a3b8; margin-bottom: 0.45rem; }
+
+    /* ── Code ── */
+    pre {
+      background: #111827;
+      border: 1px solid #374151;
+      border-radius: 8px;
+      padding: 0.9rem 1.1rem;
+      overflow-x: auto;
+      font-size: 0.82rem;
+      line-height: 1.65;
+      color: #d1fae5;
+      margin: 0.4rem 0 0.5rem;
+    }
+    code { font-family: "JetBrains Mono", "Fira Code", monospace; }
+    .ic {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 4px;
+      padding: 1px 7px;
+      font-size: 0.82em;
+      color: #93c5fd;
+      font-family: "JetBrains Mono", monospace;
+    }
+
+    /* ── Callouts ── */
+    .tip  { background: #0f2744; border-left: 4px solid #3b82f6; border-radius: 0 8px 8px 0; padding: 0.75rem 1rem; font-size: 0.86rem; color: #93c5fd; margin: 0.5rem 0 0.8rem; }
+    .good { background: #052e16; border-left: 4px solid #22c55e; border-radius: 0 8px 8px 0; padding: 0.75rem 1rem; font-size: 0.86rem; color: #86efac; margin: 0.5rem 0 0.8rem; }
+    .warn { background: #1f1306; border-left: 4px solid #f59e0b; border-radius: 0 8px 8px 0; padding: 0.75rem 1rem; font-size: 0.86rem; color: #fcd34d; margin: 0.5rem 0 0.8rem; }
+
+    /* ── Table ── */
+    table { width: 100%; border-collapse: collapse; font-size: 0.87rem; margin-top: 0.5rem; }
+    th { background: #1e293b; text-align: left; padding: 0.55rem 0.85rem; color: #94a3b8; font-weight: 600; border-bottom: 2px solid #334155; }
+    td { padding: 0.55rem 0.85rem; border-bottom: 1px solid #1e293b; color: #cbd5e1; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #1a2535; }
+
+    footer { text-align: center; font-size: 0.8rem; color: #475569; padding-top: 2rem; border-top: 1px solid #1e293b; margin-top: 3rem; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Hero -->
+  <div class="hero">
+    <h1>SkyDiscover</h1>
+    <p class="tagline">A modular framework for AI-driven scientific and algorithmic discovery — uses LLMs to iteratively evolve code or text toward measurable goals.</p>
+    <span class="pill">Python 3.10+</span>
+    <span class="pill">200+ benchmarks</span>
+    <span class="pill">CAIS '26</span>
+    <span class="pill">Apache-2.0</span>
+  </div>
+
+  <!-- Nav -->
+  <nav>
+    <a href="#what">What it is</a>
+    <a href="#loop">The loop</a>
+    <a href="#components">Components</a>
+    <a href="#algorithms">Algorithms</a>
+    <a href="#demo">Demo</a>
+    <a href="#extend">Extending it</a>
+  </nav>
+
+  <!-- ── What it is ── -->
+  <section id="what">
+    <h2>What is SkyDiscover?</h2>
+    <p style="color:#94a3b8">
+      SkyDiscover automates program/prompt search using LLMs. You provide a <strong>starting solution</strong> (optional) and a <strong>scoring function</strong>. The framework repeatedly asks an LLM to produce improved variants, evaluates them, and accumulates the best into a database. Over many iterations it approaches — and often matches or beats — human-designed state-of-the-art solutions.
+    </p>
+    <p style="color:#94a3b8; margin-top:0.7rem;">
+      It introduced two new algorithms — <strong>AdaEvolve</strong> and <strong>EvoX</strong> — and benchmarked them across 200+ tasks in math, systems, GPU kernels, and competitive programming. On 14 evaluated systems/math tasks it matches or exceeds AlphaEvolve (DeepMind) and human SOTA.
+    </p>
+  </section>
+
+  <!-- ── The Loop ── -->
+  <section id="loop">
+    <h2>How it works — The Core Loop</h2>
+    <p style="color:#94a3b8; margin-bottom:0.3rem;">Every iteration is the same five-step cycle:</p>
+
+    <div class="loop">
+      <div class="loop-box">
+        <div class="num">step 1</div>
+        <div class="name">Sample</div>
+        <div class="mod">search/</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="loop-box">
+        <div class="num">step 2</div>
+        <div class="name">Build prompt</div>
+        <div class="mod">context_builder/</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="loop-box">
+        <div class="num">step 3</div>
+        <div class="name">Generate</div>
+        <div class="mod">llm/</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="loop-box">
+        <div class="num">step 4</div>
+        <div class="name">Evaluate</div>
+        <div class="mod">evaluation/</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="loop-box">
+        <div class="num">step 5</div>
+        <div class="name">Store</div>
+        <div class="mod">search/</div>
+      </div>
+      <div class="loop-return">↑ ─────────────────────────── repeat ─────────────────────────────── ↓</div>
+    </div>
+
+    <ol style="color:#94a3b8; font-size:0.9rem; margin-left:1.3rem; margin-top:0.8rem;">
+      <li><strong style="color:#e2e8f0">Sample</strong> — the search algorithm picks a parent solution (and optional context solutions) from the database.</li>
+      <li><strong style="color:#e2e8f0">Build prompt</strong> — the context builder assembles the parent, context, problem description, and any feedback into system + user messages for the LLM.</li>
+      <li><strong style="color:#e2e8f0">Generate</strong> — the LLM produces a new candidate (code diff, full rewrite, or plain text).</li>
+      <li><strong style="color:#e2e8f0">Evaluate</strong> — your scoring function runs the candidate and returns a numeric score (and optional artifacts).</li>
+      <li><strong style="color:#e2e8f0">Store</strong> — the scored candidate is added back to the database, closing the loop.</li>
+    </ol>
+    <p style="color:#94a3b8; font-size:0.88rem; margin-top:0.7rem;">
+      The <span class="ic">DiscoveryController</span> in <span class="ic">search/default_discovery_controller.py</span> orchestrates this loop. Algorithms that need custom cross-iteration logic (e.g. island rotation, co-evolution) subclass it and override <span class="ic">run_discovery()</span>.
+    </p>
+  </section>
+
+  <!-- ── Components ── -->
+  <section id="components">
+    <h2>Repo Components</h2>
+
+    <div class="comp-grid">
+
+      <div class="comp blue">
+        <div class="ctitle">Search / Database</div>
+        <div class="cpath">skydiscover/search/</div>
+        <div class="cdesc">The brain of the loop. Maintains the solution database and decides which solutions to use as parents each iteration. Each algorithm is a subpackage here.</div>
+        <ul>
+          <li><span class="ic">base_database.py</span> — abstract base</li>
+          <li><span class="ic">adaevolve/</span> — multi-island adaptive</li>
+          <li><span class="ic">evox/</span> — co-evolving strategy</li>
+          <li><span class="ic">topk/</span>, <span class="ic">beam_search/</span>, <span class="ic">best_of_n/</span></li>
+          <li><span class="ic">default_discovery_controller.py</span> — loop runner</li>
+          <li><span class="ic">registry.py</span> — maps flag names → classes</li>
+        </ul>
+      </div>
+
+      <div class="comp purple">
+        <div class="ctitle">Context Builder</div>
+        <div class="cpath">skydiscover/context_builder/</div>
+        <div class="cdesc">Assembles the exact prompt sent to the LLM each iteration — the parent solution, example programs, problem description, feedback, and instructions.</div>
+        <ul>
+          <li><span class="ic">default/</span> — standard code/text prompts</li>
+          <li><span class="ic">adaevolve/</span> — intensity-aware prompts</li>
+          <li><span class="ic">evox/</span> — includes strategy context</li>
+          <li><span class="ic">gepa_native/</span> — Pareto-aware prompts</li>
+          <li><span class="ic">human_feedback.py</span> — injects live feedback</li>
+        </ul>
+      </div>
+
+      <div class="comp green">
+        <div class="ctitle">LLM Layer</div>
+        <div class="cpath">skydiscover/llm/</div>
+        <div class="cdesc">Wraps LiteLLM to support any provider. Handles retries, timeouts, streaming, token limits, and multi-model weighted pools.</div>
+        <ul>
+          <li><span class="ic">llm_pool.py</span> — weighted model sampling</li>
+          <li><span class="ic">openai.py</span> — LiteLLM-backed client</li>
+          <li><span class="ic">agentic_generator.py</span> — tool-use agent mode</li>
+        </ul>
+      </div>
+
+      <div class="comp pink">
+        <div class="ctitle">Evaluation</div>
+        <div class="cpath">skydiscover/evaluation/</div>
+        <div class="cdesc">Runs your scoring function in a subprocess and parses the result. Supports three formats auto-detected at startup.</div>
+        <ul>
+          <li><span class="ic">evaluator.py</span> — Python <span class="ic">evaluate(path)</span> function</li>
+          <li><span class="ic">container_evaluator.py</span> — Docker-based</li>
+          <li><span class="ic">harbor_evaluator.py</span> — Harbor benchmark format</li>
+          <li><span class="ic">llm_judge.py</span> — LLM-as-a-judge scoring</li>
+          <li><span class="ic">wrapper.py</span> — cascade evaluation + retries</li>
+        </ul>
+      </div>
+
+      <div class="comp amber">
+        <div class="ctitle">Runner / Config / API</div>
+        <div class="cpath">skydiscover/runner.py · api.py · config.py · cli.py</div>
+        <div class="cdesc">Wires everything together and exposes the two entry points.</div>
+        <ul>
+          <li><span class="ic">runner.py</span> — initialises all components, starts the loop</li>
+          <li><span class="ic">api.py</span> — <span class="ic">run_discovery()</span> / <span class="ic">discover_solution()</span></li>
+          <li><span class="ic">cli.py</span> — <span class="ic">skydiscover-run</span> command</li>
+          <li><span class="ic">config.py</span> — YAML loading + CLI overrides</li>
+        </ul>
+      </div>
+
+      <div class="comp teal">
+        <div class="ctitle">Extras + Utils</div>
+        <div class="cpath">skydiscover/extras/ · skydiscover/utils/</div>
+        <div class="cdesc">External algorithm backends and shared helpers.</div>
+        <ul>
+          <li><span class="ic">extras/</span> — OpenEvolve, GEPA, ShinkaEvolve wrappers + live monitor dashboard</li>
+          <li><span class="ic">utils/code_utils.py</span> — diff parsing, EVOLVE-BLOCK extraction</li>
+          <li><span class="ic">utils/metrics.py</span> — score tracking, diversity</li>
+          <li><span class="ic">utils/async_utils.py</span> — concurrency helpers</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <h3>Benchmarks</h3>
+    <table>
+      <thead><tr><th>Folder</th><th>Domain</th><th>Tasks</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td><span class="ic">benchmarks/math/</span></td><td>Math</td><td>14</td><td>Circle packing, Erdos, geometric optimisation</td></tr>
+        <tr><td><span class="ic">benchmarks/ADRS/</span></td><td>Systems</td><td>5</td><td>Cloud scheduling, load balancing, MoE placement</td></tr>
+        <tr><td><span class="ic">benchmarks/gpu_mode/</span></td><td>GPU</td><td>4</td><td>GPU kernel optimisation</td></tr>
+        <tr><td><span class="ic">benchmarks/kernelbench/</span></td><td>GPU</td><td>250+</td><td>KernelBench speedup tasks</td></tr>
+        <tr><td><span class="ic">benchmarks/frontier-cs-eval/</span></td><td>Algorithms</td><td>172</td><td>Competitive programming problems</td></tr>
+        <tr><td><span class="ic">benchmarks/prompt_optimization/</span></td><td>NLP</td><td>1</td><td>HotPotQA prompt evolution (text mode)</td></tr>
+        <tr><td><span class="ic">benchmarks/image_gen/</span></td><td>Creative</td><td>1</td><td>AI image generation evolution</td></tr>
+        <tr><td><span class="ic">benchmarks/ale_bench/</span></td><td>Algorithms</td><td>10</td><td>Algorithmic contest problems</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ── Algorithms ── -->
+  <section id="algorithms">
+    <h2>Algorithms</h2>
+    <div class="algo-grid">
+      <div class="algo">
+        <div class="atitle">⭐ AdaEvolve</div>
+        <div class="aflag">--search adaevolve</div>
+        <div class="adesc">Multi-island search with UCB island selection, EMA-based adaptive intensity, periodic migration, paradigm breakthroughs, and a quality-diversity archive. Best overall choice — especially strong at ≤50 iterations.</div>
+      </div>
+      <div class="algo">
+        <div class="atitle">🧠 EvoX</div>
+        <div class="aflag">--search evox</div>
+        <div class="adesc">Co-evolves both the solution <em>and</em> the search strategy itself using a second LLM loop. Strategy evolution unlocks step-change improvements in longer runs (≥50 iterations).</div>
+      </div>
+      <div class="algo">
+        <div class="atitle">🎲 Best-of-N</div>
+        <div class="aflag">--search best_of_n</div>
+        <div class="adesc">Simple baseline — generates N variants from the same parent then picks the best. Fast and cheap, good for quick sanity checks.</div>
+      </div>
+      <div class="algo">
+        <div class="atitle">🔍 Beam Search</div>
+        <div class="aflag">--search beam_search</div>
+        <div class="adesc">Maintains a beam of top solutions and expands all of them each iteration. Broader exploration than Top-K.</div>
+      </div>
+      <div class="algo">
+        <div class="atitle">📊 Top-K</div>
+        <div class="aflag">--search topk</div>
+        <div class="adesc">Always mutates the best-known solution, using the next K as context. Minimal setup, good first experiment.</div>
+      </div>
+      <div class="algo">
+        <div class="atitle">🗺️ OpenEvolve Native</div>
+        <div class="aflag">--search openevolve_native</div>
+        <div class="adesc">Native port of OpenEvolve's MAP-Elites quality-diversity grid with island-based ring migration. No external install needed.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Demo ── -->
+  <section id="demo">
+    <h2>Demo — Circle Packing</h2>
+    <p style="color:#94a3b8; margin-bottom:1rem;">
+      Pack 26 non-overlapping circles in a unit square and maximise the sum of their radii.
+      The seed program uses a naive ring layout (score ~0.4). The AlphaEvolve paper reached 2.635 (score = 1.0).
+      This is the official quick-start benchmark — it has a live monitor enabled out of the box.
+    </p>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="label">Install uv</div>
+        <div class="sub">SkyDiscover uses uv for dependency management. Skip if you already have it.</div>
+        <pre><code>curl -LsSf https://astral.sh/uv/install.sh | sh
+source $HOME/.local/bin/env    # or restart your terminal</code></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="label">Install dependencies</div>
+        <div class="sub">Run from the repo root.</div>
+        <pre><code>cd /root/skydiscover
+uv sync
+uv sync --extra math</code></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="label">Set your OpenAI key</div>
+        <pre><code>export OPENAI_API_KEY="sk-..."</code></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="label">Run the experiment</div>
+        <div class="sub">Use <span class="ic">gpt-4o-mini</span> and 10 iterations to keep it fast and cheap. A dashboard URL will print at startup.</div>
+        <pre><code>uv run skydiscover-run \
+  benchmarks/math/circle_packing/initial_program.py \
+  benchmarks/math/circle_packing/evaluator.py \
+  --config benchmarks/math/circle_packing/config.yaml \
+  --search adaevolve \
+  --model gpt-4o-mini \
+  --iterations 10</code></pre>
+        <div class="good">The live monitor dashboard is enabled in the config. Open the printed URL (e.g. <span class="ic">http://localhost:8765</span>) to see a scatter plot of all programs, code diffs, scores, and AI summaries updating in real time.</div>
+        <div class="tip">What the LLM is doing: receiving the current best packing code → proposing a diff → the evaluator checks for overlaps and boundary violations → scores sum-of-radii / 2.635 → best programs persist into the next round.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <div class="label">Try a different algorithm on the same problem</div>
+        <pre><code>uv run skydiscover-run \
+  benchmarks/math/circle_packing/initial_program.py \
+  benchmarks/math/circle_packing/evaluator.py \
+  --config benchmarks/math/circle_packing/config.yaml \
+  --search evox \
+  --model gpt-4o-mini \
+  --iterations 10</code></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <div class="label">Replay a finished run</div>
+        <pre><code>uv run skydiscover-viewer outputs/checkpoint_10</code></pre>
+      </div>
+    </div>
+
+    <h3>What to expect</h3>
+    <table>
+      <thead><tr><th>Iterations</th><th>Typical score</th><th>What the LLM discovers</th></tr></thead>
+      <tbody>
+        <tr><td>0 (seed)</td><td>~0.4</td><td>Naive concentric rings, lots of wasted space</td></tr>
+        <tr><td>10</td><td>~0.6–0.75</td><td>Hexagonal grids, tighter spacing</td></tr>
+        <tr><td>50</td><td>~0.85–0.95</td><td>Mixed-radius layers, better boundary use</td></tr>
+        <tr><td>100</td><td>~0.95–1.0+</td><td>Approaches / matches AlphaEvolve (2.635)</td></tr>
+      </tbody>
+    </table>
+    <div class="warn" style="margin-top:0.9rem;">Score = <span class="ic">sum_of_radii / 2.635</span>. A score of 1.0 means you matched the AlphaEvolve paper result.</div>
+  </section>
+
+  <!-- ── Extending ── -->
+  <section id="extend">
+    <h2>Extending SkyDiscover</h2>
+    <table>
+      <thead><tr><th>What you want</th><th>What to do</th></tr></thead>
+      <tbody>
+        <tr><td>Run your own problem</td><td>Write <span class="ic">evaluator.py</span> with an <span class="ic">evaluate(program_path) → dict</span> function returning <span class="ic">combined_score</span>. Optionally add <span class="ic">initial_program.py</span> with <span class="ic"># EVOLVE-BLOCK-START/END</span> markers.</td></tr>
+        <tr><td>New search algorithm</td><td>Subclass <span class="ic">ProgramDatabase</span> in <span class="ic">skydiscover/search/</span>, implement <span class="ic">add()</span> and <span class="ic">sample()</span>, register in <span class="ic">route.py</span>. See <span class="ic">topk/</span> (56 lines) as the minimal example.</td></tr>
+        <tr><td>Custom LLM prompting</td><td>Subclass <span class="ic">ContextBuilder</span> in <span class="ic">skydiscover/context_builder/</span>. See <span class="ic">context_builder/README.md</span>.</td></tr>
+        <tr><td>Containerised evaluator</td><td>Create a directory with a <span class="ic">Dockerfile</span> + <span class="ic">evaluate.sh</span> that writes JSON to stdout. Point <span class="ic">skydiscover-run</span> at the directory.</td></tr>
+        <tr><td>External benchmark suite</td><td>Use Harbor format: directory with <span class="ic">instruction.md</span> + <span class="ic">environment/Dockerfile</span> + <span class="ic">tests/test.sh</span>. AlgoTune, EvoEval, BigCodeBench, USACO, and more work out of the box.</td></tr>
+        <tr><td>Evolve text / prompts</td><td>Pass a <span class="ic">.txt</span> file as the initial program and set <span class="ic">language: text</span> + <span class="ic">diff_based_generation: false</span> in config.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <footer>
+    SkyDiscover &mdash; CAIS '26 &mdash; Apache-2.0 license &mdash; lshu@berkeley.edu · mert_cemri@berkeley.edu · shubham3@berkeley.edu
+  </footer>
+
+</div>
+</body>
+</html>

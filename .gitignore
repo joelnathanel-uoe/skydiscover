@@ -58,3 +58,7 @@ eval_runs/
 
 # Local documentation
 tasks/
+
+# Dissertation generated outputs
+Dissertation Project/run_summaries/
+Dissertation Project/instance_study/

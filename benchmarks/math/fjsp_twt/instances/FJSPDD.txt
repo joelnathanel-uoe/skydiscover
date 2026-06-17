@@ -1,0 +1,49 @@
+This folder contains 4 sets of problems instances Set 1, Set 2, Set 3, and Set 4 for flexible job shop scheduling problem. The instances are suitable for considering tardiness-related optimization criteria. Each job has an assigned weight as well. 
+
+
+Description of the problem sets:
+
+
+Set 1:
+
+Contains original problem instances WT1-WT5 from Brandimarte, P. (1993) Routing and Scheduling in a Flexible Job Shop by Tabu Searc, Annals of Operations Research, 41, 157-183.
+
+
+Set 2:
+
+Contains the generated problem instances which are based on Mk01-Mk10 instances from Brandimarte, P. (1993) Routing and Scheduling in a Flexible Job Shop by Tabu Searc. Annals of Operations Research, 41, 157-183. There are three subfolders "Tight", "Moderate", and "Loose" in folder "Set_2". The instances in these folders have tight, moderate, and loose due dates, respectively.
+
+
+Set 3:
+
+Contains the generated problem instances which are based on 01a-18a instances from Dauzere-Peres, S., Paulli, J. (1997) An Integrated Approach for Modelling and Solving the General Multiprocessor Job-shop Scheduling Problem using Tabu Search, Annals of Operations Research, 70, 281-306. There are three subfolders "Tight", "Moderate", and "Loose" in folder "Set_3". The instances in these folders have tight, moderate, and loose due dates, respectively.
+
+
+Set 4:
+
+Consists of the large-scale problem instances. Subfolders "Pm" and "Rm" contain instances with the corresponding types of the processing environment. All instances in the subfolders "Tight", "Moderate", and "Loose" have tight, moderate, and loose due dates, respectively. "LoFlex" and "HiFlex" correspond to the low and the high levels of the processing flexibility.
+
+
+General format of the problem instances:
+
+Each problem instance is saved as a separate plain-text file named <problem instance>.fjs. The format of the files is almost the same as for the problem instances found under
+
+http://www.idsia.ch/~monaldo/fjsp.html 
+
+We give an explanation of the data representation considering problem instance WT1 from Set 1.
+
+10	5
+(5)	[3]	{2	6}	{3	9}	{4	7}	[3]	{1	7}	{2	8}	{5	8}	[1]	{1	9}	[2]	2	7	4	8	2	4	7	5	6	[(0	65	1)]
+5	2	2	7	4	8	3	1	7	2	8	4	8	1	3	6	2	1	8	5	6	2	1	6	5	6	0	51	3
+5	3	1	7	2	8	4	8	3	1	7	2	8	5	8	3	2	6	3	9	4	7	2	1	6	5	6	1	2	8	0	47	1
+5	1	1	9	1	2	8	2	1	6	5	6	2	2	7	4	8	2	1	8	5	6	0	56	1
+5	3	1	7	2	8	4	8	2	1	8	5	6	1	3	6	1	1	9	3	1	7	2	8	5	8	0	64	3
+5	1	3	6	2	4	7	5	6	2	1	6	5	6	3	1	7	2	8	5	8	2	1	8	5	6	0	76	3
+5	1	1	9	3	1	7	2	8	4	8	1	3	6	2	1	6	5	6	3	2	6	3	9	4	7	0	52	1
+5	2	1	8	5	6	1	2	8	3	1	7	2	8	5	8	1	3	6	2	4	7	5	6	0	49	3
+5	2	1	8	5	6	1	2	8	1	3	6	3	1	7	2	8	4	8	2	2	7	4	8	0	45	3
+5	2	4	7	5	6	2	1	6	5	6	3	2	6	3	9	4	7	2	2	7	4	8	3	1	7	2	8	4	8	0	55	2
+
+The first row contain two numbers. The first one is the number of jobs (10). The second one is the total number of machines (5). 
+
+Each following row represents one job. For example, the second row describes the first job which consists of 5 operations. For each of the operations, the number of machines able to process it is specified. For the first operation there are 3 alternative machines followed by 3 pairs <machine> <processing time>. In this case, the pairs are 2 6, 3 9, and 4 7. The following operations have the same representation. Finally, the last three numbers define the release time (0), the due date (65), and the weight (1) of the job.

@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AdaEvolve — Full Codebase Breakdown</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #c9d1d9; line-height: 1.7; }
+
+  /* Nav */
+  .nav { position: sticky; top: 0; z-index: 100; background: #161b22; border-bottom: 1px solid #30363d; padding: 0 32px; display: flex; gap: 0; overflow-x: auto; }
+  .nav a { color: #8b949e; text-decoration: none; font-size: 0.82rem; font-weight: 500; padding: 14px 16px; white-space: nowrap; border-bottom: 2px solid transparent; transition: all 0.15s; }
+  .nav a:hover { color: #c9d1d9; border-bottom-color: #58a6ff; }
+
+  /* Hero */
+  .hero { background: linear-gradient(180deg, #161b22 0%, #0d1117 100%); padding: 56px 40px 48px; text-align: center; border-bottom: 1px solid #21262d; }
+  .hero h1 { font-size: 2.2rem; font-weight: 800; color: #e6edf3; margin-bottom: 10px; }
+  .hero p { font-size: 1rem; color: #8b949e; max-width: 680px; margin: 0 auto 20px; }
+  .hero .paper { display: inline-block; background: #1f2937; border: 1px solid #374151; border-radius: 6px; padding: 6px 14px; font-size: 0.8rem; color: #60a5fa; font-family: monospace; }
+
+  /* Layout */
+  .container { max-width: 1060px; margin: 0 auto; padding: 48px 32px; }
+  .section { margin-bottom: 64px; }
+
+  /* Section headers */
+  .section-header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
+  .file-badge { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 5px 12px; font-family: monospace; font-size: 0.82rem; color: #79c0ff; }
+  .section-title { font-size: 1.35rem; font-weight: 700; color: #e6edf3; }
+
+  /* Cards */
+  .card { background: #161b22; border: 1px solid #21262d; border-radius: 10px; padding: 20px 24px; margin-bottom: 16px; }
+  .card h3 { font-size: 0.95rem; font-weight: 700; color: #e6edf3; margin-bottom: 10px; }
+  .card p { font-size: 0.88rem; color: #8b949e; margin-bottom: 8px; }
+  .card p:last-child { margin-bottom: 0; }
+  .card ul { padding-left: 18px; }
+  .card li { font-size: 0.88rem; color: #8b949e; margin-bottom: 5px; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  /* Code blocks */
+  .code-block { background: #0d1117; border: 1px solid #21262d; border-radius: 8px; margin: 16px 0; overflow: hidden; }
+  .code-header { background: #161b22; border-bottom: 1px solid #21262d; padding: 8px 16px; display: flex; justify-content: space-between; align-items: center; }
+  .code-header .filename { font-family: monospace; font-size: 0.78rem; color: #79c0ff; }
+  .code-header .lineno { font-size: 0.75rem; color: #484f58; }
+  pre { padding: 18px 20px; overflow-x: auto; font-family: 'Courier New', 'Consolas', monospace; font-size: 0.82rem; line-height: 1.6; }
+
+  /* Syntax highlighting */
+  .kw { color: #ff7b72; }        /* keywords: def, class, if, return, for */
+  .fn { color: #d2a8ff; }        /* function names */
+  .str { color: #a5d6ff; }       /* strings */
+  .num { color: #79c0ff; }       /* numbers */
+  .cm { color: #484f58; font-style: italic; } /* comments */
+  .var { color: #ffa657; }       /* variables / self */
+  .op { color: #ff7b72; }        /* operators */
+  .cls { color: #ffa657; }       /* class names */
+  .dec { color: #79c0ff; }       /* decorators */
+
+  /* Callout boxes */
+  .callout { border-radius: 8px; padding: 14px 18px; margin: 16px 0; font-size: 0.87rem; }
+  .callout.blue { background: #0c2d6b; border: 1px solid #1f6feb; color: #79c0ff; }
+  .callout.green { background: #0d2b1e; border: 1px solid #238636; color: #56d364; }
+  .callout.yellow { background: #2b1d00; border: 1px solid #9e6a03; color: #e3b341; }
+  .callout.purple { background: #1f1235; border: 1px solid #6e40c9; color: #d2a8ff; }
+  .callout.red { background: #2d0f0f; border: 1px solid #da3633; color: #ff7b72; }
+  .callout strong { font-weight: 700; }
+
+  /* Flow diagram */
+  .flow { display: flex; align-items: center; flex-wrap: wrap; gap: 0; margin: 20px 0; }
+  .flow-box { background: #1c2128; border: 1px solid #30363d; border-radius: 8px; padding: 10px 16px; text-align: center; min-width: 110px; }
+  .flow-box .lbl { font-size: 0.7rem; color: #484f58; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
+  .flow-box .val { font-size: 0.85rem; font-weight: 600; color: #e6edf3; }
+  .flow-arrow { color: #30363d; font-size: 1.3rem; padding: 0 6px; }
+
+  /* Formula */
+  .formula { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 12px 18px; font-family: monospace; font-size: 0.9rem; color: #e6edf3; margin: 10px 0; }
+
+  /* Architecture tree */
+  .tree { background: #0d1117; border: 1px solid #21262d; border-radius: 8px; padding: 20px 24px; font-family: monospace; font-size: 0.85rem; line-height: 1.8; }
+  .tree .dir { color: #79c0ff; }
+  .tree .file { color: #c9d1d9; }
+  .tree .comment { color: #484f58; }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; font-size: 0.86rem; margin: 16px 0; }
+  th { background: #161b22; color: #8b949e; font-weight: 600; padding: 10px 14px; text-align: left; border-bottom: 1px solid #21262d; }
+  td { padding: 10px 14px; border-bottom: 1px solid #161b22; color: #c9d1d9; }
+  tr:hover td { background: #1c2128; }
+
+  /* Tags */
+  .tag { display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 4px; margin: 1px; font-family: monospace; }
+  .tag.blue { background: #0c2d6b; color: #79c0ff; }
+  .tag.green { background: #0d2b1e; color: #56d364; }
+  .tag.purple { background: #1f1235; color: #d2a8ff; }
+  .tag.orange { background: #2b1600; color: #ffa657; }
+
+  /* Divider */
+  hr { border: none; border-top: 1px solid #21262d; margin: 48px 0; }
+
+  a { color: #58a6ff; }
+  code { font-family: monospace; background: #161b22; padding: 2px 6px; border-radius: 4px; font-size: 0.85em; color: #79c0ff; }
+  strong { color: #e6edf3; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="#overview">Overview</a>
+  <a href="#exploitexplore">Explore vs Exploit</a>
+  <a href="#controller">controller.py</a>
+  <a href="#database">database.py</a>
+  <a href="#adaptation">adaptation.py</a>
+  <a href="#archive">unified_archive.py</a>
+  <a href="#diversity">diversity.py</a>
+  <a href="#tracker">tracker.py</a>
+  <a href="#generator">generator.py</a>
+</nav>
+
+<div class="hero">
+  <h1>AdaEvolve — Full Codebase Breakdown</h1>
+  <p>Adaptive LLM-driven zeroth-order optimisation with multi-island search, quality-diversity archives, and paradigm breakthrough. Every file explained with the actual code.</p>
+  <span class="paper">arxiv.org/abs/2602.20133</span>
+</div>
+
+<div class="container">
+
+  <!-- OVERVIEW -->
+  <div class="section" id="overview">
+    <div class="section-header">
+      <span class="section-title">Architecture Overview</span>
+    </div>
+
+    <div class="tree">
+<span class="dir">adaevolve/</span>
+├── <span class="file">controller.py</span>        <span class="comment"># Main loop — LLM calls, prompt building, evaluation, logging</span>
+├── <span class="file">database.py</span>          <span class="comment"># Island management — UCB selection, migration, Pareto front</span>
+├── <span class="file">adaptation.py</span>        <span class="comment"># Maths — G signal, search intensity, UCB rewards</span>
+├── <span class="dir">archive/</span>
+│   ├── <span class="file">unified_archive.py</span>  <span class="comment"># Per-island archive — elite score, novelty, Pareto ranking</span>
+│   └── <span class="file">diversity.py</span>        <span class="comment"># Code distance — token Jaccard + structure + length</span>
+└── <span class="dir">paradigm/</span>
+    ├── <span class="file">tracker.py</span>          <span class="comment"># Stagnation detection — improvement window, paradigm state</span>
+    └── <span class="file">generator.py</span>        <span class="comment"># Breakthrough ideas — LLM meta-prompt for strategy shifts</span>
+    </div>
+
+    <div class="card" style="margin-top:20px;">
+      <h3>How the pieces connect — one iteration</h3>
+      <div class="flow">
+        <div class="flow-box"><div class="lbl">database</div><div class="val">UCB selects island</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box"><div class="lbl">database</div><div class="val">Sample parent from archive</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box"><div class="lbl">controller</div><div class="val">Build prompt + call LLM</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box"><div class="lbl">controller</div><div class="val">Evaluate candidate</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box"><div class="lbl">archive</div><div class="val">Add to island archive</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box"><div class="lbl">adaptation</div><div class="val">Update G signal + UCB</div></div>
+      </div>
+    </div>
+
+    <table>
+      <thead><tr><th>File</th><th>Owns</th><th>Called by</th></tr></thead>
+      <tbody>
+        <tr><td><code>controller.py</code></td><td>LLM calls, prompt building, evaluation, JSON logging</td><td>runner.py (top level)</td></tr>
+        <tr><td><code>database.py</code></td><td>Islands, UCB selection, migration, global Pareto front</td><td>controller.py</td></tr>
+        <tr><td><code>adaptation.py</code></td><td>G signal, search intensity formula, UCB rewards</td><td>database.py</td></tr>
+        <tr><td><code>unified_archive.py</code></td><td>Elite score, novelty ranks, Pareto ranks, crowding distance</td><td>database.py</td></tr>
+        <tr><td><code>diversity.py</code></td><td>Code distance (Jaccard + structure + length)</td><td>unified_archive.py</td></tr>
+        <tr><td><code>tracker.py</code></td><td>Improvement window, stagnation flag, paradigm state</td><td>database.py</td></tr>
+        <tr><td><code>generator.py</code></td><td>LLM meta-prompt for breakthrough ideas</td><td>controller.py</td></tr>
+      </tbody>
+    </table>
+
+    <div class="card" style="margin-top:32px;">
+      <h3>One full iteration — step by step</h3>
+      <p>Every iteration of <code>run_discovery()</code> executes the same 7-step sequence. Only one island is active per iteration.</p>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:0; margin: 0 0 16px;">
+
+      <div style="display:flex; gap:0; align-items:stretch;">
+        <div style="display:flex; flex-direction:column; align-items:center; width:48px; flex-shrink:0;">
+          <div style="width:32px; height:32px; border-radius:50%; background:#1f6feb; color:#e6edf3; font-weight:800; font-size:0.9rem; display:flex; align-items:center; justify-content:center;">1</div>
+          <div style="width:2px; background:#21262d; flex:1; margin-top:4px;"></div>
+        </div>
+        <div style="background:#161b22; border:1px solid #21262d; border-radius:8px; padding:14px 18px; margin:0 0 6px 10px; flex:1;">
+          <strong style="color:#79c0ff;">UCB selects one island</strong> — <span style="color:#8b949e; font-size:0.87rem;"><code>adaptation.py → select_dimension_ucb()</code>. Balances reward (recent score improvements) vs exploration bonus (grows when island hasn't been visited recently). Only one island runs this iteration.</span>
+          <div style="margin-top:8px; font-family:monospace; font-size:0.8rem; color:#484f58;">
+            iter 1 → island 0 &nbsp; (both underexplored, random pick)<br>
+            iter 2 → island 1 &nbsp; (island 0 just visited, 1 hasn't been)<br>
+            iter 3 → island 0 &nbsp; (island 0 got a good score, high reward)<br>
+            iter 4 → island 1 &nbsp; (island 1 falling behind on visits)<br>
+            iter 15 → migration runs (ring: 0→1→0)
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:0; align-items:stretch;">
+        <div style="display:flex; flex-direction:column; align-items:center; width:48px; flex-shrink:0;">
+          <div style="width:32px; height:32px; border-radius:50%; background:#1f6feb; color:#e6edf3; font-weight:800; font-size:0.9rem; display:flex; align-items:center; justify-content:center;">2</div>
+          <div style="width:2px; background:#21262d; flex:1; margin-top:4px;"></div>
+        </div>
+        <div style="background:#161b22; border:1px solid #21262d; border-radius:8px; padding:14px 18px; margin:0 0 6px 10px; flex:1;">
+          <strong style="color:#79c0ff;">Sampling mode drawn from intensity</strong> — <span style="color:#8b949e; font-size:0.87rem;"><code>adaptation.py → get_search_intensity()</code> returns a value [0.15, 0.5] based on G. High G (many recent improvements) → low intensity → mostly exploitation. Low G (stagnating) → high intensity → mostly exploration.</span>
+          <div style="margin-top:8px; font-family:monospace; font-size:0.8rem; color:#484f58;">
+            high G → intensity≈0.15 → exploitation 72%, exploration 15%, balanced 13%<br>
+            low  G → intensity≈0.5  → exploitation 35%, exploration 50%, balanced 15%
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:0; align-items:stretch;">
+        <div style="display:flex; flex-direction:column; align-items:center; width:48px; flex-shrink:0;">
+          <div style="width:32px; height:32px; border-radius:50%; background:#1f6feb; color:#e6edf3; font-weight:800; font-size:0.9rem; display:flex; align-items:center; justify-content:center;">3</div>
+          <div style="width:2px; background:#21262d; flex:1; margin-top:4px;"></div>
+        </div>
+        <div style="background:#161b22; border:1px solid #21262d; border-radius:8px; padding:14px 18px; margin:0 0 6px 10px; flex:1;">
+          <strong style="color:#79c0ff;">Parent sampled from that island's archive</strong> — <span style="color:#8b949e; font-size:0.87rem;"><code>unified_archive.py → sample_parent(mode)</code>. Exploitation: random pick from top 25% by <code>combined_score</code> (or Pareto front if configured). Exploration: roulette-wheel weighted by novelty score. <code>parent.solution</code> is the actual Python code string of the chosen program.</span>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:0; align-items:stretch;">
+        <div style="display:flex; flex-direction:column; align-items:center; width:48px; flex-shrink:0;">
+          <div style="width:32px; height:32px; border-radius:50%; background:#1f6feb; color:#e6edf3; font-weight:800; font-size:0.9rem; display:flex; align-items:center; justify-content:center;">4</div>
+          <div style="width:2px; background:#21262d; flex:1; margin-top:4px;"></div>
+        </div>
+        <div style="background:#161b22; border:1px solid #21262d; border-radius:8px; padding:14px 18px; margin:0 0 6px 10px; flex:1;">
+          <strong style="color:#79c0ff;">LLM call → raw response</strong> — <span style="color:#8b949e; font-size:0.87rem;"><code>controller.py → _call_llm()</code>. Prompt includes: system message (problem description), parent code, EXPLORE_LABEL or EXPLOIT_LABEL, any human feedback, and paradigm guidance if active. LLM returns a raw text string (<code>response</code>) containing explanation + code or diff blocks.</span>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:0; align-items:stretch;">
+        <div style="display:flex; flex-direction:column; align-items:center; width:48px; flex-shrink:0;">
+          <div style="width:32px; height:32px; border-radius:50%; background:#1f6feb; color:#e6edf3; font-weight:800; font-size:0.9rem; display:flex; align-items:center; justify-content:center;">5</div>
+          <div style="width:2px; background:#21262d; flex:1; margin-top:4px;"></div>
+        </div>
+        <div style="background:#161b22; border:1px solid #21262d; border-radius:8px; padding:14px 18px; margin:0 0 6px 10px; flex:1;">
+          <strong style="color:#79c0ff;">Parse child code from response</strong> — <span style="color:#8b949e; font-size:0.87rem;"><code>controller.py → _execute_generation()</code>. If diff mode: scan response for <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt; SEARCH / ======= / &gt;&gt;&gt;&gt;&gt;&gt;&gt; REPLACE</code> blocks and apply them to <code>parent.solution</code>. If no blocks found, fall back to extracting a full <code>```python``` </code> block. Result is <code>child_solution</code> — the new Python code string.</span>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:0; align-items:stretch;">
+        <div style="display:flex; flex-direction:column; align-items:center; width:48px; flex-shrink:0;">
+          <div style="width:32px; height:32px; border-radius:50%; background:#1f6feb; color:#e6edf3; font-weight:800; font-size:0.9rem; display:flex; align-items:center; justify-content:center;">6</div>
+          <div style="width:2px; background:#21262d; flex:1; margin-top:4px;"></div>
+        </div>
+        <div style="background:#161b22; border:1px solid #21262d; border-radius:8px; padding:14px 18px; margin:0 0 6px 10px; flex:1;">
+          <strong style="color:#79c0ff;">Evaluator scores the child</strong> — <span style="color:#8b949e; font-size:0.87rem;"><code>evaluator.py → evaluate(program_path)</code>. Runs child in a subprocess on all benchmark instances. Returns <code>combined_score</code> (and <code>tight_score</code> / <code>loose_score</code> if configured). Score stored in <code>program.metrics</code>.</span>
+          <div style="margin-top:8px; font-family:monospace; font-size:0.8rem; color:#484f58;">
+            combined_score = mean over instances of wspt_twt / (wspt_twt + heuristic_twt)<br>
+            0.5 = matches WSPT baseline &nbsp; 1.0 = zero tardiness
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:0; align-items:stretch;">
+        <div style="display:flex; flex-direction:column; align-items:center; width:48px; flex-shrink:0;">
+          <div style="width:32px; height:32px; border-radius:50%; background:#1f6feb; color:#e6edf3; font-weight:800; font-size:0.9rem; display:flex; align-items:center; justify-content:center;">7</div>
+          <div style="width:2px; background:#21262d; flex:1; margin-top:4px;"></div>
+        </div>
+        <div style="background:#161b22; border:1px solid #21262d; border-radius:8px; padding:14px 18px; margin:0 0 6px 10px; flex:1;">
+          <strong style="color:#79c0ff;">Child added to island archive</strong> — <span style="color:#8b949e; font-size:0.87rem;"><code>unified_archive.py → add(program)</code>. Elite score computed: <code>fitness_weight × fitness_pct + novelty_weight × novelty_pct + pareto_weight × pareto_pct</code>. If archive full, child competes against its most similar program (deterministic crowding) — higher elite score wins.</span>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:0; align-items:stretch;">
+        <div style="display:flex; flex-direction:column; align-items:center; width:48px; flex-shrink:0;">
+          <div style="width:32px; height:32px; border-radius:50%; background:#388bfd; color:#e6edf3; font-weight:800; font-size:0.9rem; display:flex; align-items:center; justify-content:center;">8</div>
+        </div>
+        <div style="background:#161b22; border:1px solid #21262d; border-radius:8px; padding:14px 18px; margin:0 0 0 10px; flex:1;">
+          <strong style="color:#79c0ff;">G signal and UCB updated</strong> — <span style="color:#8b949e; font-size:0.87rem;"><code>adaptation.py → record_evaluation()</code>. If child beat island's best score: G accumulates (intensity drops next iteration → more exploitation). UCB reward for this island updated with globally-normalised delta. Stagnation window updated. → loop back to step 1.</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- EXPLORE VS EXPLOIT -->
+  <div class="section" id="exploitexplore">
+    <div class="section-header">
+      <span class="section-title">Explore vs Exploit — Two Independent Levels</span>
+    </div>
+
+    <div class="card">
+      <h3>The same tradeoff appears twice, at different scales</h3>
+      <p>AdaEvolve has explore/exploit logic at two completely separate levels. They are driven by different mechanisms and make different decisions. One decides <em>which island</em> to run. The other decides <em>which program within the island</em> to mutate.</p>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h3>Level 1 — UCB island selection</h3>
+        <p><strong>Exploit:</strong> pick the island that has been getting the best score improvements recently (high reward_avg)</p>
+        <p><strong>Explore:</strong> don't neglect an island that hasn't been visited for a while — its UCB bonus grows as <code>√(ln(N) / visits)</code></p>
+        <p style="margin-top:8px;font-size:0.82rem;color:#484f58;">Driven by: <code>adaptation.py → select_dimension_ucb()</code></p>
+      </div>
+      <div class="card">
+        <h3>Level 2 — Parent sampling within island</h3>
+        <p><strong>Exploit:</strong> sample from the top 25% by fitness — refine what's already good</p>
+        <p><strong>Explore:</strong> sample weighted by novelty score — mutate something structurally unusual</p>
+        <p style="margin-top:8px;font-size:0.82rem;color:#484f58;">Driven by: <code>database.py → _sample_from_archive()</code></p>
+      </div>
+    </div>
+
+    <div class="callout blue"><strong>They are independent.</strong> UCB can be exploiting a productive island while parent sampling is in exploration mode within that island — mutating a novel but weak program rather than the current best. Or vice versa. The two mechanisms don't communicate with each other.</div>
+
+    <div class="card">
+      <h3>How the sampling mode is chosen — the actual formula</h3>
+      <p>Once an island is selected, search intensity (from the G-signal) determines the probability of each mode:</p>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="filename">database.py — mode probability formula</span><span class="lineno">lines 556–564</span></div>
+      <pre><span class="cm"># Formula: exploration=intensity%, exploitation=(1-intensity)*70%, balanced=(1-intensity)*30%</span>
+<span class="cm"># Example with intensity=0.4: exploration=40%, exploitation=42%, balanced=18%</span>
+rand = random.<span class="fn">random</span>()
+<span class="kw">if</span> rand &lt; intensity:
+    mode = <span class="str">"exploration"</span>
+<span class="kw">elif</span> rand &lt; intensity + (<span class="num">1</span> - intensity) * <span class="num">0.7</span>:
+    mode = <span class="str">"exploitation"</span>
+<span class="kw">else</span>:
+    mode = <span class="str">"balanced"</span></pre>
+    </div>
+
+    <div class="formula">
+intensity = 0.15  (low, mature run with many improvements)
+  → exploration  = 15%
+  → exploitation = 72%   (= 0.85 × 70%)
+  → balanced     = 13%
+
+intensity = 0.5   (high, early run or stagnating)
+  → exploration  = 50%
+  → exploitation = 35%   (= 0.50 × 70%)
+  → balanced     = 15%
+    </div>
+
+    <div class="card">
+      <h3>How each mode selects the parent</h3>
+      <ul>
+        <li><strong>exploitation</strong> — sort archive by <code>combined_score</code>, take top 25%, pick one at random. If Pareto objectives configured: sample from the Pareto front weighted by crowding distance instead.</li>
+        <li><strong>exploration</strong> — pick randomly, weighted by novelty score. Programs furthest from others in code-space are most likely.</li>
+        <li><strong>balanced</strong> — 50/50 coin flip between exploitation and exploration.</li>
+      </ul>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="filename">unified_archive.py — sample_parent()</span><span class="lineno">lines 649–675</span></div>
+      <pre><span class="kw">if</span> mode == <span class="str">"exploitation"</span>:
+    top_progs = <span class="var">self</span>.<span class="fn">get_top_programs</span>()  <span class="cm"># top ~20% by combined_score</span>
+    <span class="kw">return</span> random.<span class="fn">choice</span>(top_progs)
+
+<span class="kw">elif</span> mode == <span class="str">"exploration"</span>:
+    <span class="cm"># Roulette wheel weighted by novelty</span>
+    novelties = [<span class="fn">max</span>(<span class="var">self</span>._novelty_scores.<span class="fn">get</span>(p.id, <span class="num">0.0</span>), <span class="num">0.001</span>) <span class="kw">for</span> p <span class="kw">in</span> programs]
+    r = random.<span class="fn">random</span>() * <span class="fn">sum</span>(novelties)
+    cumsum = <span class="num">0.0</span>
+    <span class="kw">for</span> p, n <span class="kw">in</span> <span class="fn">zip</span>(programs, novelties):
+        cumsum += n
+        <span class="kw">if</span> cumsum >= r:
+            <span class="kw">return</span> p
+
+<span class="kw">else</span>:  <span class="cm"># balanced</span>
+    <span class="kw">if</span> random.<span class="fn">random</span>() &lt; <span class="num">0.5</span>:
+        <span class="kw">return</span> <span class="var">self</span>.<span class="fn">sample_parent</span>(<span class="str">"exploitation"</span>)
+    <span class="kw">else</span>:
+        <span class="kw">return</span> <span class="var">self</span>.<span class="fn">sample_parent</span>(<span class="str">"exploration"</span>)</pre>
+    </div>
+
+    <div class="card">
+      <h3>The mode is also told to the LLM</h3>
+      <p>The sampling mode isn't just internal bookkeeping — it gets injected into the prompt as a label. These are real strings defined in <code>database.py</code>:</p>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="filename">database.py — EXPLORE_LABEL and EXPLOIT_LABEL</span><span class="lineno">lines 41–85</span></div>
+      <pre>EXPLORE_LABEL = <span class="str">"""
+This parent was selected through diversity-driven sampling
+to explore different regions of the solution space.
+Consider making more substantial structural changes.
+"""</span>
+
+EXPLOIT_LABEL = <span class="str">"""
+This parent was selected through fitness-based sampling
+to exploit high-performing solutions.
+Consider making targeted refinements to improve performance.
+"""</span></pre>
+    </div>
+
+    <div class="callout green"><strong>Why tell the LLM?</strong> The label nudges the LLM toward bolder changes (exploration) or smaller refinements (exploitation) without hard-coding mutation sizes. The LLM gets the parent code plus this hint and decides how much to change. It's a soft signal, not a constraint.</div>
+
+    <div class="card">
+      <h3>How the score flows into parent selection — full chain</h3>
+      <p>From evaluator output to which program gets chosen as a parent:</p>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="filename">full scoring → parent selection chain</span></div>
+      <pre><span class="cm"># Step 1: evaluator returns metrics dict</span>
+{ <span class="str">'combined_score'</span>: <span class="num">0.61</span>, <span class="str">'validity'</span>: <span class="num">1.0</span>, ... }
+
+<span class="cm"># Step 2: stored in program.metrics</span>
+program.metrics = { <span class="str">'combined_score'</span>: <span class="num">0.61</span>, ... }
+
+<span class="cm"># Step 3: _get_fitness() reads combined_score</span>
+<span class="kw">def</span> <span class="fn">_get_fitness</span>(<span class="var">self</span>, program):
+    <span class="kw">return</span> program.metrics.<span class="fn">get</span>(<span class="var">self</span>.fitness_key)  <span class="cm"># → 0.61</span>
+
+<span class="cm"># Step 4a: exploitation → get_top_programs() sorts by _get_fitness</span>
+sorted_pop = <span class="fn">sorted</span>(population, key=<span class="var">self</span>._get_fitness, reverse=<span class="kw">True</span>)
+top_k = <span class="fn">max</span>(<span class="num">1</span>, <span class="fn">len</span>(sorted_pop) // <span class="num">4</span>)   <span class="cm"># top 25%</span>
+parent = random.<span class="fn">choice</span>(sorted_pop[:top_k])  <span class="cm"># random within top 25%</span>
+
+<span class="cm"># Step 4b: score also affects who STAYS in the archive</span>
+<span class="cm"># elite_score = fitness_weight × fitness_pct + novelty_weight × novelty_pct</span>
+<span class="cm"># low elite_score → evicted when archive is full → can never be selected</span></pre>
+    </div>
+
+    <div class="callout yellow"><strong>Score affects parent selection two ways:</strong> directly (only top 25% eligible in exploitation mode) and indirectly (low-scoring programs get evicted from the archive entirely, so they can never be selected as parents at all).</div>
+  </div>
+
+  <hr>
+
+  <!-- CONTROLLER -->
+  <div class="section" id="controller">
+    <div class="section-header">
+      <span class="file-badge">controller.py</span>
+      <span class="section-title">The Main Loop</span>
+    </div>
+
+    <div class="card">
+      <h3>What it does</h3>
+      <p>Owns the top-level <code>run_discovery()</code> loop. Each iteration it checks for paradigm stagnation, samples a parent from the database, builds the LLM prompt (including human feedback and paradigm guidance), calls the LLM, parses the response as a code diff or full rewrite, evaluates the candidate, and hands the result back to the database. All timing, logging, and retry logic lives here too.</p>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="filename">controller.py — run_discovery()</span><span class="lineno">lines 226–266</span></div>
+      <pre><span class="kw">async def</span> <span class="fn">run_discovery</span>(<span class="var">self</span>, start_iteration, max_iterations, checkpoint_callback):
+    total = start_iteration + max_iterations
+    <span class="var">self</span>._setup_iteration_stats_logging()  <span class="cm"># opens the .jsonl log file</span>
+    <span class="var">self</span>._ensure_all_islands_seeded()      <span class="cm"># copy seed to any empty islands</span>
+
+    <span class="kw">for</span> iteration <span class="kw">in</span> <span class="fn">range</span>(start_iteration, total):
+        <span class="kw">if</span> <span class="var">self</span>.shutdown_event.is_set():
+            <span class="kw">break</span>
+        <span class="kw">try</span>:
+            <span class="kw">await</span> <span class="var">self</span>.<span class="fn">_run_iteration</span>(iteration, checkpoint_callback)
+        <span class="kw">except</span> Exception <span class="kw">as</span> e:
+            logger.<span class="fn">exception</span>(<span class="str">f"Iteration {iteration} failed: {e}"</span>)
+        <span class="kw">finally</span>:
+            <span class="cm"># CRITICAL: triggers UCB update and migration check</span>
+            <span class="var">self</span>.database.<span class="fn">end_iteration</span>(iteration)</pre>
+    </div>
+
+    <div class="callout blue"><strong>Why <code>end_iteration()</code> is in finally:</strong> It must run even if the iteration throws an exception. This is what advances the UCB island selection and triggers migration. If it were skipped on failures, one island could get stuck being selected forever.</div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="filename">controller.py — _run_iteration()</span><span class="lineno">lines 300–338</span></div>
+      <pre><span class="kw">async def</span> <span class="fn">_run_iteration</span>(<span class="var">self</span>, iteration, checkpoint_callback):
+    <span class="cm"># 1. Check for global paradigm stagnation</span>
+    <span class="kw">if</span> <span class="var">self</span>.database.use_paradigm_breakthrough <span class="kw">and</span> <span class="var">self</span>.database.<span class="fn">is_paradigm_stagnating</span>():
+        <span class="kw">await</span> <span class="var">self</span>.<span class="fn">_generate_paradigms_if_needed</span>()
+
+    <span class="cm"># 2. Run normal step (with retry on failure)</span>
+    result = <span class="kw">await</span> <span class="var">self</span>.<span class="fn">_run_normal_step</span>(iteration)
+
+    <span class="cm"># 3. Log stats regardless of success/failure</span>
+    <span class="var">self</span>.<span class="fn">_log_iteration_stats</span>(iteration, ...)</pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="filename">controller.py — _generate_child() — human feedback injection</span><span class="lineno">lines 562–568</span></div>
+      <pre><span class="cm"># Apply human feedback (append or replace mode)</span>
+<span class="kw">if</span> <span class="var">self</span>.feedback_reader:
+    <span class="var">self</span>.feedback_reader.<span class="fn">set_current_prompt</span>(prompt[<span class="str">"system"</span>])
+    feedback = <span class="var">self</span>.feedback_reader.<span class="fn">read</span>()       <span class="cm"># reads human_feedback.md</span>
+    <span class="kw">if</span> feedback:
+        prompt = <span class="var">self</span>.feedback_reader.<span class="fn">apply_feedback</span>(prompt)
+        <span class="var">self</span>.feedback_reader.<span class="fn">log_usage</span>(iteration, feedback, mode)</pre>
+    </div>
+
+    <div class="callout green"><strong>Human feedback</strong> is read from <code>human_feedback.md</code> on every iteration. In <em>append</em> mode it adds your text after the system message. In <em>replace</em> mode it becomes the entire system message. The file is re-read live — you can write to it mid-run and the next iteration picks it up.</div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="filename">controller.py — _execute_generation() — diff vs full rewrite</span><span class="lineno">lines 642–653</span></div>
+      <pre><span class="kw">if</span> <span class="var">self</span>.config.diff_based_generation:
+    diffs = <span class="fn">extract_diffs</span>(response)
+    <span class="kw">if</span> diffs:
+        child_solution = <span class="fn">apply_diff</span>(parent.solution, response)
+        changes = <span class="fn">format_diff_summary</span>(diffs)
+    <span class="kw">else</span>:
+        <span class="cm"># No diffs found — fall back to full rewrite</span>
+        child_solution = <span class="fn">parse_full_rewrite</span>(response, <span class="var">self</span>.config.language)
+        changes = <span class="str">"Full rewrite"</span>
+<span class="kw">else</span>:
+    child_solution = <span class="fn">parse_full_rewrite</span>(response, <span class="var">self</span>.config.language)
+    changes = <span class="str">"Full rewrite"</span></pre>
+    </div>
+
+    <div class="callout yellow"><strong>Diff-based generation</strong> (default, set via <code>diff_based_generation: true</code> in config) asks the LLM to return a SEARCH/REPLACE block rather than the whole file. The fallback to full rewrite handles cases where the LLM ignores the format instruction.</div>
+
+    <div class="card">
+      <h3>What is <code>response</code>?</h3>
+      <p><code>response</code> is the raw text string returned by the LLM — completely unparsed. It includes any explanation the LLM wrote plus the code block or diff blocks. The parsing functions then extract just the code from it.</p>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="filename">controller.py — where response comes from</span><span class="lineno">line 629–630</span></div>
+      <pre>result = <span class="kw">await</span> <span class="var">self</span>.<span class="fn">_call_llm</span>(prompt[<span class="str">"system"</span>], prompt[<span class="str">"user"</span>])
+response = result.text   <span class="cm"># raw string — everything the LLM said</span></pre>
+    </div>
+
+    <div class="card">
+      <h3>What the LLM response looks like in diff mode</h3>
+      <p>The LLM might return a mix of explanation and one or more SEARCH/REPLACE blocks. The entire thing is <code>response</code>. <code>extract_diffs()</code> scans it with a regex for the markers and returns just the pairs.</p>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="filename">example LLM response (diff mode)</span></div>
+      <pre><span class="cm"># Everything below is the raw `response` string:</span>
+
+<span class="str">"I'll add due-date awareness to the priority rule by incorporating slack time.
+
+&lt;&lt;&lt;&lt;&lt;&lt;&lt; SEARCH
+    priority = job['weight'] / best_proc
+=======
+    slack = max(0, job['due_date'] - current_time - best_proc)
+    priority = job['weight'] / (slack + 1)
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; REPLACE"</span>
+
+<span class="cm"># extract_diffs() regex: r"&lt;&lt;&lt;&lt;&lt;&lt;&lt; SEARCH\n(.*?)=======\n(.*?)&gt;&gt;&gt;&gt;&gt;&gt;&gt; REPLACE"</span>
+<span class="cm"># returns: [("    priority = job['weight'] / best_proc",</span>
+<span class="cm">#            "    slack = max(...)\n    priority = ...")]</span>
+
+<span class="cm"># apply_diff() finds the SEARCH text in parent.solution and replaces it</span></pre>
+    </div>
+
+    <div class="card">
+      <h3>What is <code>parent.solution</code>?</h3>
+      <p><code>parent.solution</code> is the <strong>stored Python code</strong> of whichever program was sampled from the archive — not the LLM response from the previous iteration. It could be the best program from iteration 3 still being used as a parent in iteration 47. The diff is applied to that stored code to produce the child's code.</p>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- DATABASE -->
+  <div class="section" id="database">
+    <div class="section-header">
+      <span class="file-badge">database.py</span>
+      <span class="section-title">Island Management</span>
+    </div>
+
+    <div class="card">
+      <h3>What it does</h3>
+      <p>Manages all islands and their archives. Decides which island runs each iteration (UCB), handles migration between islands, maintains the global Pareto front across all islands, and coordinates dynamic island spawning when productivity drops.</p>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="filename">database.py — island presets</span><span class="lineno">lines 98–135</span></div>
+      <pre>ISLAND_CONFIG_PRESETS = [
+    {<span class="str">"name"</span>: <span class="str">"balanced"</span>,   <span class="str">"pareto_weight"</span>: <span class="num">0.4</span>, <span class="str">"fitness_weight"</span>: <span class="num">0.3</span>, <span class="str">"novelty_weight"</span>: <span class="num">0.3</span>},
+    {<span class="str">"name"</span>: <span class="str">"quality"</span>,    <span class="str">"pareto_weight"</span>: <span class="num">0.2</span>, <span class="str">"fitness_weight"</span>: <span class="num">0.6</span>, <span class="str">"novelty_weight"</span>: <span class="num">0.2</span>},
+    {<span class="str">"name"</span>: <span class="str">"diversity"</span>,  <span class="str">"pareto_weight"</span>: <span class="num">0.3</span>, <span class="str">"fitness_weight"</span>: <span class="num">0.2</span>, <span class="str">"novelty_weight"</span>: <span class="num">0.5</span>},
+    {<span class="str">"name"</span>: <span class="str">"pareto"</span>,     <span class="str">"pareto_weight"</span>: <span class="num">0.6</span>, <span class="str">"fitness_weight"</span>: <span class="num">0.2</span>, <span class="str">"novelty_weight"</span>: <span class="num">0.2</span>},
+    {<span class="str">"name"</span>: <span class="str">"exploration"</span>,<span class="str">"pareto_weight"</span>: <span class="num">0.2</span>, <span class="str">"fitness_weight"</span>: <span class="num">0.2</span>, <span class="str">"novelty_weight"</span>: <span class="num">0.6</span>},
+]</pre>
+    </div>
+
+    <p style="font-size:0.87rem; color:#8b949e; margin-bottom:16px;">With 2 islands (default) you get <strong>balanced</strong> + <strong>quality</strong>. Dynamic spawning adds <strong>diversity</strong>, <strong>pareto</strong>, <strong>exploration</strong> in that order when productivity drops.</p>
+
+    <div class="code-block">
+      <div class="code-header"><span class="filename">database.py — sample() — exploitation uses Pareto front</span><span class="lineno">lines 566–575</span></div>
+      <pre><span class="kw">if</span> mode == <span class="str">"exploitation"</span>:
+    <span class="kw">if</span> archive.config.pareto_objectives <span class="kw">and</span> archive._pareto_ranks:
+        <span class="cm"># Multi-objective: sample from Pareto front</span>
+        parent = <span class="var">self</span>.<span class="fn">_sample_pareto_front</span>(archive, population)
+    <span class="kw">else</span>:
+        <span class="cm"># Single-objective: sample from top scorers</span>
+        parent = <span class="var">self</span>.<span class="fn">_sample_top</span>(population)
+<span class="kw">else</span>:
+    <span class="cm"># exploration and balanced: use archive's novelty-aware sampling</span>
+    parent = archive.<span class="fn">sample_parent</span>(mode)</pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="filename">database.py — _sample_pareto_front() — crowding distance weighting</span><span class="lineno">lines 677–699</span></div>
+      <pre><span class="kw">def</span> <span class="fn">_sample_pareto_front</span>(<span class="var">self</span>, archive, population):
+    <span class="cm"># Get all rank-0 programs (the actual Pareto front)</span>
+    front_programs = [
+        archive.<span class="fn">get</span>(pid)
+        <span class="kw">for</span> pid, rank <span class="kw">in</span> archive._pareto_ranks.items()
+        <span class="kw">if</span> rank == <span class="num">0</span>
+    ]
+
+    <span class="kw">if</span> <span class="fn">len</span>(front_programs) &lt; <span class="num">2</span>:
+        <span class="kw">return</span> <span class="var">self</span>.<span class="fn">_sample_top</span>(population)  <span class="cm"># not enough for Pareto</span>
+
+    <span class="cm"># Weight by crowding distance — prefer programs in sparse regions</span>
+    <span class="cm"># (programs in crowded regions are less unique)</span>
+    weights = []
+    <span class="kw">for</span> p <span class="kw">in</span> front_programs:
+        cd = archive._crowding_distances.<span class="fn">get</span>(p.id, <span class="num">0.0</span>)
+        <span class="kw">if</span> cd == <span class="fn">float</span>(<span class="str">"inf"</span>): cd = <span class="num">1e6</span>
+        weights.<span class="fn">append</span>(<span class="fn">max</span>(cd, <span class="num">0.001</span>))
+
+    <span class="kw">return</span> random.<span class="fn">choices</span>(front_programs, weights=weights, k=<span class="num">1</span>)[<span class="num">0</span>]</pre>
+    </div>
+
+    <div class="callout purple"><strong>Crowding distance weighting</strong> means the search preferentially evolves from programs in sparse objective-space regions — heuristics that are unlike their neighbours on the Pareto front. This naturally diversifies the types of heuristics evolved, directly relevant to RQ2 and RQ3.</div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="filename">database.py — migration (ring topology)</span><span class="lineno">lines ~800–840</span></div>
+      <pre><span class="cm"># Migration runs every migration_interval iterations</span>
+<span class="cm"># Ring topology: island 0 → island 1 → island 2 → island 0</span>
+<span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="var">self</span>.num_islands):
+    source = i
+    target = (i + <span class="num">1</span>) % <span class="var">self</span>.num_islands
+    top_programs = <span class="var">self</span>.<span class="fn">_get_top_programs</span>(source, n=migration_count)
+
+    <span class="kw">for</span> prog <span class="kw">in</span> top_programs:
+        <span class="cm"># Add to target island archive</span>
+        <span class="var">self</span>.islands[target].<span class="fn">add</span>(prog)
+        <span class="cm"># Update adaptive state WITHOUT crediting the island</span>
+        <span class="var">self</span>.adapter.<span class="fn">receive_external_improvement</span>(target, fitness)</pre>
+    </div>
+
+    <div class="callout yellow"><strong>receive_external_improvement vs record_evaluation:</strong> Migration updates the island's best score and G signal (so it switches to exploitation mode for the new solution) but does NOT update UCB visit counts or rewards — the island didn't earn that improvement, so it shouldn't get credit in the UCB selection.</div>
+  </div>
+
+  <hr>
+
+  <!-- ADAPTATION -->
+  <div class="section" id="adaptation">
+    <div class="section-header">
+      <span class="file-badge">adaptation.py</span>
+      <span class="section-title">The Maths — G Signal, Search Intensity, UCB</span>
+    </div>
+
+    <div class="card">
+      <h3>What it does</h3>
+      <p>Two classes: <code>AdaptiveState</code> (one per island) tracks the accumulated improvement signal G and computes search intensity. <code>MultiDimensionalAdapter</code> manages all islands together and runs UCB selection to decide which island gets the next iteration.</p>
+    </div>
+
+    <div class="card">
+      <h3>The core insight</h3>
+      <p>Inspired by Adam/AdaGrad — those adapt gradient descent step sizes based on gradient history. AdaEvolve adapts LLM exploration aggressiveness based on improvement history. A productive island should <em>exploit</em> (small edits to refine); a stagnating island should <em>explore</em> (big structural changes).</p>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="filename">adaptation.py — AdaptiveState.record_evaluation()</span><span class="lineno">lines 84–114</span></div>
+      <pre><span class="kw">def</span> <span class="fn">record_evaluation</span>(<span class="var">self</span>, fitness):
+    <span class="var">self</span>.total_evaluations += <span class="num">1</span>
+
+    <span class="kw">if</span> fitness > <span class="var">self</span>.best_score:
+        raw_delta = fitness - <span class="var">self</span>.best_score
+        normalized_delta = <span class="var">self</span>.<span class="fn">_normalize_delta</span>(raw_delta)
+        <span class="var">self</span>.best_score = fitness
+        <span class="var">self</span>.improvement_count += <span class="num">1</span>
+
+        <span class="cm"># G_t = ρ * G_{t-1} + (1 - ρ) * δ²</span>
+        <span class="cm"># Exponential moving average of squared normalised improvements</span>
+        <span class="var">self</span>.accumulated_signal = (
+            <span class="var">self</span>.decay * <span class="var">self</span>.accumulated_signal
+            + (<span class="num">1</span> - <span class="var">self</span>.decay) * (normalized_delta ** <span class="num">2</span>)
+        )
+        <span class="kw">return</span> normalized_delta
+
+    <span class="kw">return</span> <span class="num">0.0</span>  <span class="cm"># no improvement — G decays naturally each iteration</span></pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="filename">adaptation.py — get_search_intensity()</span><span class="lineno">lines 152–171</span></div>
+      <pre><span class="kw">def</span> <span class="fn">get_search_intensity</span>(<span class="var">self</span>):
+    <span class="cm"># intensity = I_min + (I_max - I_min) / (1 + √(G + ε))</span>
+    G = <span class="var">self</span>.accumulated_signal
+
+    intensity = <span class="var">self</span>.intensity_min + (
+        (<span class="var">self</span>.intensity_max - <span class="var">self</span>.intensity_min) / (<span class="num">1</span> + math.<span class="fn">sqrt</span>(G + <span class="var">self</span>.epsilon))
+    )
+    <span class="kw">return</span> intensity</pre>
+    </div>
+
+    <div class="formula">
+intensity = I_min + (I_max - I_min) / (1 + √(G + ε))
+
+High G (many recent improvements) → denominator large → intensity → I_min  → exploit
+Low  G (no recent improvements)  → denominator = 1  → intensity → I_max  → explore
+
+Default: I_min = 0.15,  I_max = 0.5,  decay ρ = 0.9
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="filename">adaptation.py — MultiDimensionalAdapter — TWO normalisation schemes</span><span class="lineno">lines 318–371</span></div>
+      <pre><span class="kw">def</span> <span class="fn">record_evaluation</span>(<span class="var">self</span>, dim_idx, fitness):
+    local_best_before = <span class="var">self</span>.states[dim_idx].best_score
+
+    <span class="cm"># 1. LOCAL normalisation → search intensity (per-island scale)</span>
+    local_delta = <span class="var">self</span>.states[dim_idx].<span class="fn">record_evaluation</span>(fitness)
+
+    <span class="var">self</span>.dimension_visits[dim_idx] += <span class="num">1</span>
+    <span class="var">self</span>.decayed_visits[dim_idx] = <span class="var">self</span>.decay * <span class="var">self</span>.decayed_visits[dim_idx] + <span class="num">1.0</span>
+
+    <span class="kw">if</span> fitness > local_best_before:
+        raw_delta = fitness - local_best_before
+        <span class="cm"># 2. GLOBAL normalisation → UCB rewards (cross-island fairness)</span>
+        global_delta = <span class="var">self</span>.<span class="fn">_normalize_by_global</span>(raw_delta)
+
+        <span class="kw">if</span> fitness > <span class="var">self</span>.global_best_score:
+            <span class="var">self</span>.global_best_score = fitness
+    <span class="kw">else</span>:
+        global_delta = <span class="num">0.0</span>
+
+    <span class="cm"># UCB reward uses DECAYED reward + DECAYED visits</span>
+    <span class="var">self</span>.dimension_rewards[dim_idx] = (
+        <span class="var">self</span>.decay * <span class="var">self</span>.dimension_rewards[dim_idx] + global_delta
+    )
+    <span class="kw">return</span> local_delta</pre>
+    </div>
+
+    <div class="callout red"><strong>Why two normalisations?</strong> Without global normalisation, a weak island making small local gains (e.g. score improving from 0.1 → 0.15, a 50% local gain) would dominate UCB over a strong island making globally valuable improvements (e.g. 0.6 → 0.62, only 3% local). Global normalisation makes cross-island rewards comparable.</div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="filename">adaptation.py — UCB selection</span><span class="lineno">lines 403–463</span></div>
+      <pre><span class="kw">def</span> <span class="fn">select_dimension_ucb</span>(<span class="var">self</span>, total_iterations):
+    <span class="cm"># Ensure minimum visits first (randomised to avoid always picking island 0)</span>
+    underexplored = [i <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(n_dims) <span class="kw">if</span> <span class="var">self</span>.dimension_visits[i] &lt; <span class="var">self</span>.min_visits]
+    <span class="kw">if</span> underexplored:
+        <span class="kw">return</span> random.<span class="fn">choice</span>(underexplored)
+
+    best_dim, best_ucb = <span class="num">0</span>, <span class="fn">float</span>(<span class="str">"-inf"</span>)
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(n_dims):
+        dec_visits = <span class="var">self</span>.decayed_visits[i]
+        <span class="cm"># recent reward per recent visit (decayed so old wins fade)</span>
+        reward_avg = <span class="var">self</span>.dimension_rewards[i] / dec_visits <span class="kw">if</span> dec_visits > <span class="num">0</span> <span class="kw">else</span> <span class="num">0.0</span>
+
+        <span class="cm"># classic UCB exploration bonus (raw visits for correct ln scaling)</span>
+        exploration_bonus = <span class="var">self</span>.ucb_exploration * math.<span class="fn">sqrt</span>(
+            math.<span class="fn">log</span>(total_iterations + <span class="num">1</span>) / <span class="var">self</span>.dimension_visits[i]
+        )
+        ucb_score = reward_avg + exploration_bonus
+
+        <span class="kw">if</span> ucb_score > best_ucb:
+            best_ucb = ucb_score
+            best_dim = i
+    <span class="kw">return</span> best_dim</pre>
+    </div>
+
+    <div class="formula">
+UCB score = reward_avg + C × √(ln(N) / visits)
+
+reward_avg  = decayed_rewards / decayed_visits  ← recent reward per recent visit
+C           = 1.41 (√2, classic UCB constant)
+N           = total iterations across all islands
+visits      = raw visit count for this island
+
+Decaying rewards means old breakthroughs fade — islands don't get credit forever.
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- UNIFIED ARCHIVE -->
+  <div class="section" id="archive">
+    <div class="section-header">
+      <span class="file-badge">archive/unified_archive.py</span>
+      <span class="section-title">Quality-Diversity Archive</span>
+    </div>
+
+    <div class="card">
+      <h3>What it does</h3>
+      <p>One archive per island. Stores programs and ranks them by a combined elite score (fitness + Pareto + novelty). Uses deterministic crowding for replacement — when a new program is added, it competes against its most similar existing program rather than the worst one. This preserves diversity while still favouring quality.</p>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="filename">unified_archive.py — elite score computation</span><span class="lineno">lines 280–314</span></div>
+      <pre><span class="cm"># Called when cache is invalidated (program added or removed)</span>
+novelty_scores = {p.id: <span class="var">self</span>.<span class="fn">_compute_novelty</span>(p, programs) <span class="kw">for</span> p <span class="kw">in</span> programs}
+<span class="var">self</span>.<span class="fn">_compute_pareto_ranking</span>(programs)  <span class="cm"># NSGA-II</span>
+
+<span class="kw">for</span> program <span class="kw">in</span> programs:
+    fitness = <span class="fn">compute_proxy_score</span>(program.metrics, fitness_key=<span class="var">self</span>.config.fitness_key)
+    fitness_pct = <span class="fn">percentile_rank</span>(fitness, all_fitnesses)
+
+    novelty = novelty_scores.<span class="fn">get</span>(program.id, <span class="num">0.0</span>)
+    novelty_pct = <span class="var">self</span>.<span class="fn">_novelty_to_percentile</span>(novelty)
+
+    <span class="kw">if</span> use_pareto:
+        pareto_rank = <span class="var">self</span>._pareto_ranks.<span class="fn">get</span>(program.id, max_rank)
+        pareto_pct = <span class="num">1.0</span> - (pareto_rank / max_rank)  <span class="cm"># rank 0 → pct 1.0</span>
+
+        elite_score = (
+            <span class="var">self</span>.config.fitness_weight  * fitness_pct
+            + <span class="var">self</span>.config.pareto_weight  * pareto_pct
+            + <span class="var">self</span>.config.novelty_weight * novelty_pct
+        )
+    <span class="kw">else</span>:
+        elite_score = (
+            <span class="var">self</span>.config.fitness_weight  * fitness_pct
+            + <span class="var">self</span>.config.novelty_weight * novelty_pct
+        )</pre>
+    </div>
+
+    <div class="formula">
+elite_score = fitness_weight  × fitness_percentile   ← how good is the TWT score
+            + pareto_weight   × pareto_percentile    ← how good on tight vs loose
+            + novelty_weight  × novelty_percentile   ← how different is the code
+
+All three are percentile ranks [0,1] within the current archive population.
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="filename">unified_archive.py — _compute_novelty() — k-NN distance</span><span class="lineno">lines 392–414</span></div>
+      <pre><span class="kw">def</span> <span class="fn">_compute_novelty</span>(<span class="var">self</span>, program, all_programs):
+    <span class="cm">"""Novelty = average distance to k nearest neighbours."""</span>
+    others = [p <span class="kw">for</span> p <span class="kw">in</span> all_programs <span class="kw">if</span> p.id != program.id]
+
+    <span class="kw">if not</span> others:
+        <span class="kw">return</span> <span class="num">1.0</span>  <span class="cm"># max novelty if alone in archive</span>
+
+    <span class="cm"># Distance to every other program in archive</span>
+    distances = [<span class="var">self</span>.diversity.<span class="fn">distance</span>(program, other) <span class="kw">for</span> other <span class="kw">in</span> others]
+    distances.<span class="fn">sort</span>()
+
+    <span class="cm"># Average over k nearest — high = program is in sparse code space</span>
+    k = <span class="fn">min</span>(<span class="var">self</span>.config.k_neighbors, <span class="fn">len</span>(distances))
+    <span class="kw">return</span> <span class="fn">sum</span>(distances[:k]) / k</pre>
+    </div>
+
+    <div class="callout blue"><strong>O(n²) cost:</strong> novelty is recomputed for every program against every other every time the cache is invalidated. This is why <code>archive_size: 100</code> is the default — larger archives make this expensive. For FJSP_TWT this is fine since evaluation is the bottleneck, not archive computation.</div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="filename">unified_archive.py — _compute_pareto_ranking() — NSGA-II</span><span class="lineno">lines 420–499</span></div>
+      <pre><span class="kw">def</span> <span class="fn">_compute_pareto_ranking</span>(<span class="var">self</span>, programs):
+    <span class="cm">"""NSGA-II: non-dominated sorting + crowding distance."""</span>
+    objectives = <span class="var">self</span>.config.pareto_objectives  <span class="cm"># e.g. ["tight_score", "loose_score"]</span>
+
+    <span class="cm"># Build objective vectors (flip sign for minimisation objectives)</span>
+    obj_vectors = {}
+    <span class="kw">for</span> p <span class="kw">in</span> programs:
+        vec = []
+        <span class="kw">for</span> obj_key <span class="kw">in</span> objectives:
+            val = p.metrics.<span class="fn">get</span>(obj_key, <span class="num">0.0</span>)
+            <span class="kw">if not</span> higher_is_better.<span class="fn">get</span>(obj_key, <span class="kw">True</span>):
+                val = -val  <span class="cm"># flip so "higher is always better" internally</span>
+            vec.<span class="fn">append</span>(<span class="fn">float</span>(val))
+        obj_vectors[p.id] = vec
+
+    <span class="cm"># Non-dominated sorting into layers (rank 0 = Pareto front)</span>
+    remaining = <span class="fn">set</span>(p.id <span class="kw">for</span> p <span class="kw">in</span> programs)
+    rank = <span class="num">0</span>
+    <span class="kw">while</span> remaining:
+        front = [pid <span class="kw">for</span> pid <span class="kw">in</span> remaining
+                 <span class="kw">if not</span> <span class="fn">any</span>(<span class="var">self</span>.<span class="fn">_dominates</span>(obj_vectors[other], obj_vectors[pid])
+                            <span class="kw">for</span> other <span class="kw">in</span> remaining <span class="kw">if</span> other != pid)]
+        <span class="kw">for</span> pid <span class="kw">in</span> front:
+            pareto_ranks[pid] = rank
+        rank += <span class="num">1</span>
+
+    <span class="cm"># Crowding distance within each layer</span>
+    <span class="kw">for</span> m <span class="kw">in</span> <span class="fn">range</span>(num_objectives):
+        sorted_layer = <span class="fn">sorted</span>(layer, key=<span class="kw">lambda</span> pid: obj_vectors[pid][m])
+        crowding[sorted_layer[<span class="num">0</span>]] = <span class="fn">float</span>(<span class="str">"inf"</span>)   <span class="cm"># boundary = max spread</span>
+        crowding[sorted_layer[-<span class="num">1</span>]] = <span class="fn">float</span>(<span class="str">"inf"</span>)
+        <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="num">1</span>, <span class="fn">len</span>(sorted_layer) - <span class="num">1</span>):
+            crowding[sorted_layer[i]] += (
+                obj_vectors[sorted_layer[i+<span class="num">1</span>]][m] - obj_vectors[sorted_layer[i-<span class="num">1</span>]][m]
+            ) / obj_range</pre>
+    </div>
+
+    <div class="callout green"><strong>Crowding distance</strong> measures how much space surrounds a program in objective space. Programs at the extremes (best on tight, or best on loose) get infinite distance. Programs in densely-clustered regions get low distance. The archive prefers to keep high-crowding programs — this is what maintains diversity across the Pareto front.</div>
+  </div>
+
+  <hr>
+
+  <!-- DIVERSITY -->
+  <div class="section" id="diversity">
+    <div class="section-header">
+      <span class="file-badge">archive/diversity.py</span>
+      <span class="section-title">Code Distance</span>
+    </div>
+
+    <div class="card">
+      <h3>What it does</h3>
+      <p>A pluggable abstraction for measuring how different two programs are. Used by novelty scoring in the archive. Default strategy is <code>CodeDiversity</code> — no external dependencies, fast, based on code text alone.</p>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="filename">diversity.py — CodeDiversity</span><span class="lineno">lines 55–80</span></div>
+      <pre><span class="kw">class</span> <span class="cls">CodeDiversity</span>(DiversityStrategy):
+    <span class="cm">"""
+    Token Jaccard (50%) + structural features (30%) + length diff (20%)
+    Fast computation, no external dependencies.
+    """</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="var">self</span>,
+        token_weight: float = <span class="num">0.5</span>,      <span class="cm"># vocabulary differences</span>
+        structure_weight: float = <span class="num">0.3</span>,  <span class="cm"># imports, functions, classes</span>
+        length_weight: float = <span class="num">0.2</span>,     <span class="cm"># normalised length difference</span>
+    ): ...</pre>
+    </div>
+
+    <table>
+      <thead><tr><th>Signal</th><th>Weight</th><th>What it captures</th></tr></thead>
+      <tbody>
+        <tr><td>Token Jaccard distance</td><td>50%</td><td>How many unique tokens each program has vs shared. Two programs using different variable names, operators, function calls score high.</td></tr>
+        <tr><td>Structural features</td><td>30%</td><td>Imports, number of functions, number of classes. A heuristic that adds a helper function or imports a new library is structurally different.</td></tr>
+        <tr><td>Length difference</td><td>20%</td><td>Normalised difference in code length. A much longer or shorter program is considered more novel.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout yellow"><strong>Limitation for FJSP_TWT:</strong> This is syntactic not semantic novelty. Two programs implementing the same dispatching logic with different variable names would score low distance. Two programs using completely different features (one uses slack, one uses machine load) would score high. It's a reasonable but imperfect proxy for the "design space coverage" you care about in RQ2/RQ3.</div>
+
+    <div class="card">
+      <h3>Alternative strategies (available but not default)</h3>
+      <ul>
+        <li><code>MetricDiversity</code> — uses normalised Euclidean distance across evaluator metrics (e.g. tight_score, loose_score). Two programs with different score profiles are considered different.</li>
+        <li><code>HybridDiversity</code> — weighted combination of code + metric diversity. Most powerful but requires metric diversity to be meaningful.</li>
+      </ul>
+      <p style="margin-top:10px;">Switch via <code>diversity_strategy: "metric"</code> or <code>"hybrid"</code> in config.</p>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- TRACKER -->
+  <div class="section" id="tracker">
+    <div class="section-header">
+      <span class="file-badge">paradigm/tracker.py</span>
+      <span class="section-title">Stagnation Detection</span>
+    </div>
+
+    <div class="card">
+      <h3>What it does</h3>
+      <p>Maintains a sliding window of binary improvement signals and detects when the search has stagnated. Manages the lifecycle of active paradigms — tracking which one is currently active, how many times each has been used, and archiving completed ones with their outcomes (SUCCESS/FAILED).</p>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="filename">tracker.py — is_paradigm_stagnating()</span><span class="lineno">lines 93–114</span></div>
+      <pre><span class="kw">def</span> <span class="fn">is_paradigm_stagnating</span>(<span class="var">self</span>):
+    <span class="cm"># Need enough history to make a judgment</span>
+    <span class="kw">if</span> <span class="fn">len</span>(<span class="var">self</span>.improvement_history) &lt; <span class="var">self</span>.window_size:
+        <span class="kw">return</span> <span class="kw">False</span>
+
+    <span class="cm"># If we have active paradigms, use them first before generating new ones</span>
+    <span class="kw">if</span> <span class="var">self</span>.<span class="fn">has_active_paradigm</span>():
+        <span class="kw">return</span> <span class="kw">False</span>
+
+    <span class="cm"># Stagnating if improvement rate < threshold</span>
+    <span class="cm"># Default: window=10, threshold=0.12 → fewer than 12% of recent iters improved</span>
+    <span class="kw">return</span> <span class="var">self</span>.<span class="fn">get_improvement_rate</span>() &lt; <span class="var">self</span>.improvement_threshold</pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="filename">tracker.py — _archive_current_paradigms() — outcome tracking</span><span class="lineno">lines 234–275</span></div>
+      <pre><span class="kw">def</span> <span class="fn">_archive_current_paradigms</span>(<span class="var">self</span>):
+    score_improvement = <span class="var">self</span>.best_score_during_paradigm - <span class="var">self</span>.best_score_at_paradigm_gen
+
+    <span class="kw">for</span> paradigm <span class="kw">in</span> <span class="var">self</span>.active_paradigms:
+        archived = {
+            **paradigm,
+            <span class="str">"outcome"</span>: <span class="str">"SUCCESS"</span> <span class="kw">if</span> score_improvement > <span class="num">0.001</span> <span class="kw">else</span> <span class="str">"FAILED"</span>,
+            <span class="str">"score_improvement"</span>: score_improvement,
+        }
+        <span class="var">self</span>.tried_paradigms.<span class="fn">append</span>(archived)
+
+    <span class="cm"># tried_paradigms is fed back to the generator so it avoids repeating</span>
+    <span class="cm"># failed approaches and can build on successful ones</span></pre>
+    </div>
+
+    <div class="callout purple"><strong>Paradigm feedback loop:</strong> When the generator is triggered again, it receives the list of previously tried paradigms with their outcomes. This means the generator knows "ATC-style slack rules were tried and succeeded" or "look-ahead approaches were tried and failed" — it learns what directions are worth pursuing.</div>
+  </div>
+
+  <hr>
+
+  <!-- GENERATOR -->
+  <div class="section" id="generator">
+    <div class="section-header">
+      <span class="file-badge">paradigm/generator.py</span>
+      <span class="section-title">Breakthrough Idea Generation</span>
+    </div>
+
+    <div class="card">
+      <h3>What it does</h3>
+      <p>When stagnation is detected, calls the LLM with a meta-prompt: "here is the current best heuristic, its score, and what we've already tried — suggest 3 fundamentally different algorithmic directions to try next." Returns a list of paradigm dicts that get injected into subsequent iteration prompts.</p>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="filename">paradigm/generator.py — what a paradigm looks like</span><span class="lineno">~line 90</span></div>
+      <pre><span class="cm"># Each generated paradigm is a dict:</span>
+{
+    <span class="str">"idea"</span>:            <span class="str">"Use ATC (Apparent Tardiness Cost) priority rule"</span>,
+    <span class="str">"description"</span>:    <span class="str">"ATC combines urgency and weight: w * exp(-max(0, d-p-t) / k*p)"</span>,
+    <span class="str">"what_to_optimize"</span>:<span class="str">"Balance weight-urgency tradeoff, tune k parameter"</span>,
+    <span class="str">"approach_type"</span>:  <span class="str">"priority_rule"</span>,
+    <span class="str">"cautions"</span>:       <span class="str">"k parameter is sensitive; needs calibration per instance"</span>,
+}</pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="filename">paradigm/generator.py — how it's injected into the prompt</span><span class="lineno">~lines 88–100</span></div>
+      <pre><span class="kw">if</span> paradigm:
+    <span class="cm"># Inject into system prompt as a bonus direction</span>
+    paradigm_text = <span class="str">f"""
+## Paradigm Breakthrough Guidance
+The search has stagnated. Try this new direction:
+
+Idea: {paradigm['idea']}
+Description: {paradigm['description']}
+What to optimise: {paradigm['what_to_optimize']}
+Cautions: {paradigm['cautions']}
+
+Apply this direction to the current best program.
+"""</span>
+    prompt[<span class="str">"system"</span>] += paradigm_text</pre>
+    </div>
+
+    <div class="callout green"><strong>For FJSP_TWT</strong> this is where domain knowledge matters. If the initial Stage 1 run stagnates on WSPT variants, paradigm generation might suggest ATC, EDD, or slack-based rules — exactly the design space diversity you want to track in RQ2. Examining which paradigms were generated and whether they succeeded or failed is part of your trajectory analysis.</div>
+
+    <div class="card">
+      <h3>Max uses and rotation</h3>
+      <p>Each paradigm is used <code>max_paradigm_uses</code> times (default 5) before rotating to the next. With 3 paradigms generated per trigger, that's 15 iterations of paradigm-guided search before the tracker checks stagnation again. If none of the paradigms improved the score, they're all archived as FAILED and the next stagnation check can trigger a new generation with those failures as context.</p>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- PUTTING IT TOGETHER -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-title">Putting It Together — What Happens in Your FJSP_TWT Run</span>
+    </div>
+
+    <table>
+      <thead><tr><th>Iteration</th><th>What happens</th><th>Which file</th></tr></thead>
+      <tbody>
+        <tr><td>0</td><td>Seed program (WSPT) added to both islands. combined_score ≈ 0.54.</td><td>database.py</td></tr>
+        <tr><td>1–5</td><td>UCB ensures both islands get visited. Intensity is high (G=0) → exploration mode.</td><td>adaptation.py</td></tr>
+        <tr><td>Any</td><td>LLM proposes variant. If it's a diff, applied to parent. Evaluated on 35 instances. tight_score + loose_score + combined_score returned.</td><td>controller.py</td></tr>
+        <tr><td>Any</td><td>NSGA-II runs on archive. Programs ranked by Pareto dominance across tight_score × loose_score. Crowding distances computed.</td><td>unified_archive.py</td></tr>
+        <tr><td>Any</td><td>Elite score = fitness_pct + pareto_pct + novelty_pct. Program competes against most similar in archive (deterministic crowding).</td><td>unified_archive.py</td></tr>
+        <tr><td>15, 30, ...</td><td>Migration: top programs from island 0 → island 1 → island 0.</td><td>database.py</td></tr>
+        <tr><td>~30+</td><td>If improvement rate &lt; 12% over last 10 iterations: paradigm generator triggers. LLM suggests 3 new directions (e.g. ATC rule, slack-based, look-ahead).</td><td>tracker.py + generator.py</td></tr>
+        <tr><td>Any (mid-run)</td><td>You write to human_feedback.md. Next iteration picks it up and appends to system prompt.</td><td>human_feedback.py</td></tr>
+        <tr><td>Every 10</td><td>Checkpoint saved. best_program.py updated. adaevolve_iteration_stats_*.jsonl has full record.</td><td>controller.py</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+</body>
+</html>
