@@ -43,8 +43,13 @@ def _load_generated_instances():
 
 EVAL_INSTANCES = _load_generated_instances()
 
-# Per-instance timeout for the generated program (seconds).
-INSTANCE_TIMEOUT_S = 5
+# Per-instance cumulative schedule_next time budget (seconds).
+INSTANCE_TIMEOUT_S    = 5
+# Per-call timeout = PER_CALL_K_S * n_feasible_pairs + PER_CALL_BASE_S
+PER_CALL_K_S          = 0.0001   # seconds per feasible (ready_op, machine) pair
+PER_CALL_BASE_S       = 0.010    # minimum per-call budget (10ms)
+# Subprocess wall-clock fallback — hung-process guard only.
+SUBPROCESS_FALLBACK_S = 60
 
 
 # ---------------------------------------------------------------------------
@@ -251,6 +256,14 @@ try:
     with open('{instance_path}') as f:
         instance = json.load(f)
 
+    import time as _time, signal as _signal
+
+    _K      = {PER_CALL_K_S}
+    _BASE   = {PER_CALL_BASE_S}
+    _BUDGET = {INSTANCE_TIMEOUT_S}
+
+    _t_import = _time.perf_counter()
+
     # Load harness
     harness_spec = importlib.util.spec_from_file_location("harness", '{HARNESS_PATH}')
     harness_mod = importlib.util.module_from_spec(harness_spec)
@@ -262,9 +275,67 @@ try:
     sys.path.insert(0, os.path.dirname('{program_path}'))
     spec.loader.exec_module(program)
 
-    result = harness_mod.run_harness(instance, program.schedule_next)
+    def _count_feasible(unscheduled, instance):
+        jobs = instance['jobs']
+        return sum(
+            len(jobs[j]['operations'][o])
+            for j, o in unscheduled
+            if o == 0 or (j, o - 1) not in unscheduled
+        )
+
+    _elapsed    = [0.0]
+    _call_count = [0]
+    _max_call   = [0.0]
+    _call_times = []
+    _fn         = program.schedule_next
+
+    def _alarm(sig, frame):
+        raise TimeoutError(f"schedule_next exceeded per-call limit")
+
+    _signal.signal(_signal.SIGALRM, _alarm)
+
+    def _timed(**kwargs):
+        n_feas = _count_feasible(kwargs['unscheduled'], kwargs['instance'])
+        limit  = _K * n_feas + _BASE
+        _signal.setitimer(_signal.ITIMER_REAL, limit)
+        _t0 = _time.perf_counter()
+        try:
+            r = _fn(**kwargs)
+        finally:
+            _signal.setitimer(_signal.ITIMER_REAL, 0)
+        dt = _time.perf_counter() - _t0
+        _elapsed[0]    += dt
+        _call_count[0] += 1
+        _max_call[0]    = max(_max_call[0], dt)
+        _call_times.append(dt)
+        if _elapsed[0] > _BUDGET:
+            raise TimeoutError(f"cumulative schedule_next exceeded {{_BUDGET}}s")
+        return r
+
+    def _checked(**kwargs):
+        if _fn.__dict__:
+            raise ValueError(f"schedule_next has private attributes before call: {{list(_fn.__dict__.keys())}}")
+        kwargs['instance'] = dict(kwargs['instance'])
+        r = _timed(**kwargs)
+        if _fn.__dict__:
+            raise ValueError(f"schedule_next set private attributes: {{list(_fn.__dict__.keys())}}")
+        return r
+
+    _t_harness_start = _time.perf_counter()
+    result = harness_mod.run_harness(instance, _checked)
+    _t_harness_end   = _time.perf_counter()
+
+    timing = {{
+        'import_s':   _t_harness_start - _t_import,
+        'harness_s':  _t_harness_end - _t_harness_start,
+        'call_s':     _elapsed[0],
+        'n_calls':    _call_count[0],
+        'max_call_s': _max_call[0],
+        'call_times': _call_times,
+    }}
+
     with open('{results_path}', 'wb') as f:
-        pickle.dump({{'result': result}}, f)
+        pickle.dump({{'result': result, 'timing': timing}}, f)
 
 except Exception as e:
     traceback.print_exc()
@@ -293,7 +364,9 @@ except Exception as e:
                 data = pickle.load(f)
             if 'error' in data:
                 raise RuntimeError(f"Program error: {data['error']}")
-            return data['result']
+            result = data['result']
+            result['timing'] = data.get('timing', {})
+            return result
         except subprocess.TimeoutExpired:
             process.kill()
             process.wait()
@@ -318,7 +391,7 @@ def _score_instance(program_path, instance_path):
         if cs_twt is None:
             return 0.0, f"{os.path.basename(instance_path)}: no CS baseline"
 
-        result = run_program_on_instance(program_path, inst, timeout_seconds=INSTANCE_TIMEOUT_S)
+        result = run_program_on_instance(program_path, inst, timeout_seconds=SUBPROCESS_FALLBACK_S)
         schedule = result['schedule']
         valid, msg = validate_schedule(inst, schedule)
         if not valid:

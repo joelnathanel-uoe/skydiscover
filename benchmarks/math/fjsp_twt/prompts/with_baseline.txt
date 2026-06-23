@@ -53,4 +53,17 @@ tied it; negative means you did worse. If your function produces an invalid
 schedule or times out on any instance, the program is invalid.
 Your aim is to beat the baseline as much as you can.
 
+--- Constraints ---
+
+schedule_next is called once per operation.
+
+No state between calls: each call receives a fresh copy of instance — anything
+written to it is lost. Setting attributes on the function itself (e.g.
+schedule_next._cache = ...) is also forbidden and will invalidate the program.
+Design your heuristic to make each dispatch decision using only the arguments
+passed in that call.
+
+Each call has a time budget proportional to the number of feasible
+(ready op, machine) pairs at that step.
+
 Restrictions: Python standard library + numpy only.
