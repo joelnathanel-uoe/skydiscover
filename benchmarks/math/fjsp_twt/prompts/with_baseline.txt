@@ -1,50 +1,56 @@
-You are an expert in combinatorial optimization and scheduling.
-Your task is to discover a high-performance construction heuristic
-for the Flexible Job Shop Scheduling Problem with Total Weighted
-Tardiness (FJSP-TWT).
+You are an expert in combinatorial optimization and scheduling. Your task
+is to write a heuristic for the Flexible Job Shop Scheduling Problem with
+Total Weighted Tardiness (FJSP-TWT).
 
-Problem: Given n jobs (each a sequence of operations) and m machines,
-assign each operation to one eligible machine and determine start times
-to minimise total weighted tardiness: sum_i w_i * max(0, C_i - d_i),
-where w_i is the weight, d_i the due date, and C_i the completion time
-of job i.
+--- The problem ---
 
-Your heuristic must implement solve(instance) where instance is a dict:
-  n_jobs (int): number of jobs
-  n_machines (int): number of machines
-  jobs (list of dicts): each with
-    release_time (int), due_date (int), weight (float),
-    operations (list of lists of [machine_id, proc_time] pairs)
+n jobs and m machines. Each job is a fixed sequence of operations; each
+operation must run on one of its eligible machines without preemption. A
+job's operations must run in order — operation k cannot start until
+operation k-1 ends. Minimise total weighted tardiness:
+  TWT = sum_j  w_j * max(0, C_j - d_j)
+where w_j is the job weight, d_j its due date, C_j its completion time.
 
-Return a list of dicts, one per scheduled operation:
-  {'job': int, 'op': int, 'machine': int, 'start': int, 'end': int}
+--- What your function must do ---
 
-Feasibility constraints that must be satisfied:
-  1. Precedence: operations within a job must be scheduled in order —
-     op k cannot start until op k-1 has finished.
-  2. Release time: the first operation of job j cannot start before
-     jobs[j]['release_time'].
-  3. Machine capacity: each machine can process at most one operation
-     at a time — no two operations on the same machine may overlap.
-  4. Machine eligibility: each operation must be assigned to one of its
-     listed eligible machines only.
-  5. No preemption: once an operation starts it runs to completion.
+Implement schedule_next. Each call, it selects one unscheduled operation,
+assigns it to an eligible machine, and places it in that machine's queue:
 
-Scoring: your heuristic is evaluated against MODD (Modified Operation
-Due Date), a strong classical baseline designed specifically for weighted
-tardiness problems. MODD works as follows:
-  - Each operation is assigned a deadline by propagating the job due date
-    backwards through the operation sequence:
-      op_due = job_due - sum(min processing time of all later operations)
-  - At each step, the operation with the earliest op_due is dispatched.
-  - Machine selection uses earliest finish time (EFT).
+    def schedule_next(unscheduled, machine_sequences, start_times, end_times,
+                      job_completion, instance):
+        ...
+        return op, machine, position
 
-Score = modd_twt / (modd_twt + your_twt) averaged over benchmark
-instances — 0.5 ties MODD, 1.0 means zero tardiness, below 0.5 means
-worse than MODD. Maximise this. Invalid schedules score 0.
+Each call you return three things:
+  op       — (j, o): which operation to place. Must be in unscheduled.
+               (j, o) is ready to place if o == 0 or (j, o-1) is placed.
+  machine  — which machine to assign it to (must be eligible for that op).
+  position — where in machine_sequences[machine] to insert it:
+               == len(seq): append at end — always feasible.
+               <  len(seq): insert before that index, shifting later ops
+                            back. Invalid if it creates a job-precedence
+                            cycle — the program is rejected.
 
-Restrictions:
-  - Construction heuristic only — a greedy dispatching rule that builds
-    the schedule step by step. No metaheuristics, search, or RL.
-  - Python standard library + numpy only. No external solvers or packages
-    that require installation (e.g. ortools, scipy).
+The state you have access to:
+  unscheduled       set[(j, o)] — ops not yet placed
+  machine_sequences dict[m -> list[(j, o)]] — each machine's queue
+  start_times       dict[(j, o) -> int] — exact if placed; lower bound if not
+  end_times         dict[(j, o) -> int] — exact if placed; lower bound if not
+  job_completion    dict[j -> int | None] — completion of j's last op, or None
+  instance          n_jobs, n_machines, jobs[{release_time, due_date, weight,
+                      operations: [[[machine_id, proc_time], ...], ...]}]
+
+--- Scoring ---
+
+We score your function by running it on 100 benchmark instances and taking
+the median of the following quantity:
+
+  score = (cs_twt - your_twt) / cs_twt
+
+where cs_twt is a strong heuristic baseline. A positive score means your
+schedule achieved lower tardiness than the baseline. A score of 0 means you
+tied it; negative means you did worse. If your function produces an invalid
+schedule or times out on any instance, the program is invalid.
+Your aim is to beat the baseline as much as you can.
+
+Restrictions: Python standard library + numpy only.

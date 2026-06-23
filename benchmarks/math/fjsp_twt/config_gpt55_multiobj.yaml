@@ -1,0 +1,104 @@
+language: python
+diff_based_generation: true
+max_iterations: 200
+checkpoint_interval: 10
+max_solution_length: 60000
+
+llm:
+  models:
+    - name: "gpt-5.5"
+      weight: 1.0
+  max_tokens: 16384
+  timeout: 600
+
+prompt:
+  system_message: |
+    You are an expert in combinatorial optimization and scheduling. Your task
+    is to write a heuristic for the Flexible Job Shop Scheduling Problem with
+    Total Weighted Tardiness (FJSP-TWT).
+
+    --- The problem ---
+
+    n jobs and m machines. Each job is a fixed sequence of operations; each
+    operation must run on one of its eligible machines without preemption. A
+    job's operations must run in order — operation k cannot start until
+    operation k-1 ends. Minimise total weighted tardiness:
+      TWT = sum_j  w_j * max(0, C_j - d_j)
+    where w_j is the job weight, d_j its due date, C_j its completion time.
+
+    --- What your function must do ---
+
+    Implement schedule_next. Each call, it selects one unscheduled operation,
+    assigns it to an eligible machine, and places it in that machine's queue:
+
+        def schedule_next(unscheduled, machine_sequences, start_times, end_times,
+                          job_completion, instance):
+            ...
+            return op, machine, position
+
+    Each call you return three things:
+      op       — (j, o): which operation to place. Must be in unscheduled.
+                   (j, o) is ready to place if o == 0 or (j, o-1) is placed.
+      machine  — which machine to assign it to (must be eligible for that op).
+      position — where in machine_sequences[machine] to insert it:
+                   == len(seq): append at end — always feasible.
+                   <  len(seq): insert before that index, shifting later ops
+                                back. Invalid if it creates a job-precedence
+                                cycle — the program is rejected.
+
+    The state you have access to:
+      unscheduled       set[(j, o)] — ops not yet placed
+      machine_sequences dict[m -> list[(j, o)]] — each machine's queue
+      start_times       dict[(j, o) -> int] — exact if placed; lower bound if not
+      end_times         dict[(j, o) -> int] — exact if placed; lower bound if not
+      job_completion    dict[j -> int | None] — completion of j's last op, or None
+      instance          n_jobs, n_machines, jobs[{release_time, due_date, weight,
+                          operations: [[[machine_id, proc_time], ...], ...]}]
+
+    --- Scoring ---
+
+    We score your function by running it on 100 benchmark instances. For each
+    instance we compute:
+
+      score = (cs_twt - your_twt) / cs_twt
+
+    where cs_twt is a strong heuristic baseline. A positive score means your
+    schedule achieved lower tardiness than the baseline.
+
+    We report three metrics (all higher is better):
+      combined_score    — median score across all 100 instances
+      q10_score         — 10th-percentile score (robustness on hardest instances)
+      fraction_positive — fraction of instances where you beat the baseline (0–1)
+
+    If your function produces an invalid schedule or times out on any instance,
+    the program is invalid. Your aim is to maximise all three metrics.
+
+    Restrictions: Python standard library + numpy only.
+evaluator:
+  timeout: 300
+  cascade_evaluation: false
+
+search:
+  type: adaevolve
+  num_context_programs: 1
+  database:
+    num_islands: 3
+    population_size: 20
+    migration_interval: 30
+    migration_count: 1
+    fitness_key: combined_score
+    higher_is_better:
+      combined_score: true
+      q10_score: true
+      fraction_positive: true
+    pareto_objectives: [q10_score, fraction_positive]
+    pareto_objectives_weight: 0.4
+    use_dynamic_islands: true
+    use_paradigm_breakthrough: true
+
+monitor:
+  enabled: true
+  port: 8767
+  host: "127.0.0.1"
+
+human_feedback_enabled: true
