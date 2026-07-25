@@ -66,3 +66,14 @@ Dissertation Project/instance_study/
 # Convenience symlinks with absolute targets (not portable, not part of the project)
 Dissertation Project/skydiscover
 Dissertation Project/fjsp papers/sobeyko_monch_2016.pdf
+
+# Reference documents and spreadsheets are kept locally, never committed:
+# publisher PDFs are copyrighted, and binary spreadsheets don't diff.
+*.pdf
+*.xlsx
+*.xls
+Dissertation Project/karim_response_per_instance.csv
+fjsp_twt_results.zip
+# ...but instance manifests are provenance (they record each instance's seed)
+!benchmarks/math/fjsp_twt/instances/*/manifest.csv
+!Dissertation Project/jss-instance-gen/instances/manifest.csv
