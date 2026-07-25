@@ -399,8 +399,8 @@ def run_harness(instance, schedule_next_fn):
                                  else None)
                              for j, job in enumerate(jobs)}
 
-        op, machine, position = schedule_next_fn(
-            unscheduled=unscheduled,
+        result = schedule_next_fn(
+            unscheduled=frozenset(unscheduled),
             machine_sequences=machine_sequences,
             start_times=start_times,
             end_times=end_times,
@@ -408,11 +408,22 @@ def run_harness(instance, schedule_next_fn):
             instance=instance,
         )
 
+        if not (isinstance(result, tuple) and len(result) == 3):
+            raise InvalidMoveError(f"schedule_next must return a 3-tuple, got {type(result)}")
+        op, machine, position = result
+
+        if not (isinstance(op, tuple) and len(op) == 2
+                and isinstance(op[0], int) and isinstance(op[1], int)):
+            raise InvalidMoveError(f"op must be (int, int), got {type(op)}: {op}")
+        if not isinstance(machine, int):
+            raise InvalidMoveError(f"machine must be int, got {type(machine)}: {machine}")
+        if not isinstance(position, int) or position < 0:
+            raise InvalidMoveError(f"position must be non-negative int, got {position}")
         if op not in unscheduled:
             raise InvalidMoveError(f"op {op} is not in unscheduled")
         if machine not in _eligible_machines(instance, op):
             raise InvalidMoveError(f"machine {machine} not eligible for op {op}")
-        if not isinstance(position, int) or not (0 <= position <= len(h.mseq[machine])):
+        if not (position <= len(h.mseq[machine])):
             raise InvalidMoveError(f"invalid position {position} for machine {machine}")
         if not h.try_commit(op, machine, position):
             raise InvalidMoveError(f"move {op} -> machine {machine} pos {position} creates a cycle")

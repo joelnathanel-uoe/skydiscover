@@ -47,11 +47,16 @@ the median of the following quantity:
 
   score = (cs_twt - your_twt) / cs_twt
 
-where cs_twt is a strong heuristic baseline. A positive score means your
-schedule achieved lower tardiness than the baseline. A score of 0 means you
-tied it; negative means you did worse. If your function produces an invalid
-schedule or times out on any instance, the program is invalid.
-Your aim is to beat the baseline as much as you can.
+where cs_twt is a strong baseline: for each instance, it is the best result
+achieved by a range of classical scheduling heuristics (e.g. shortest
+processing time, earliest due date, and apparent tardiness cost rules),
+each evaluated on that instance. Your goal is for schedule_next to produce
+a schedule that beats the best of these classical rules.
+
+A positive score means your schedule achieved lower tardiness than the
+baseline. A score of 0 means you tied it; negative means you did worse. If
+your function produces an invalid schedule or times out on any instance, the
+program is invalid. Your aim is to beat the baseline as much as you can.
 
 --- Constraints ---
 

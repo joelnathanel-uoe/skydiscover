@@ -14,6 +14,13 @@ Scoring: median over instances of (cs_twt - heuristic_twt) / cs_twt
 
 Baseline: Combined Scheduler (CS) from Sobeyko & Mönch (2016) — runs 8 SDRs +
 ATC(κ=0.1..7.0) and returns the schedule with the lowest TWT.
+
+VARIANT (evaluator_penalize_failures.py): if any instance times out, produces
+an invalid schedule, or errors, the whole program is scored a fixed -100.0
+combined_score (instead of validity=-1) so it is recorded in the population
+with a heavily penalized score and its error is visible in later context,
+rather than being silently retried and dropped. See evaluator.py for the
+unmodified baseline behavior.
 """
 
 import json
@@ -48,6 +55,10 @@ PER_CALL_K_S          = 0.0001   # seconds per feasible (ready_op, machine) pair
 PER_CALL_BASE_S       = 0.010    # minimum per-call budget (10ms)
 # Subprocess wall-clock fallback — hung-process guard only.
 SUBPROCESS_FALLBACK_S = 60
+
+# Fixed penalty applied to the whole program if any single instance fails
+# (timeout, invalid schedule, or error).
+FAILED_PROGRAM_SCORE = -100.0
 
 
 # ---------------------------------------------------------------------------
@@ -423,7 +434,12 @@ def evaluate(program_path):
         score, err = _score_instance(program_path, path)
         if err:
             _cleanup()
-            return {'validity': -1,
+            # Penalize the whole program instead of dropping it: a valid
+            # (non-error-flagged) combined_score means the search controller
+            # records this program in the population rather than silently
+            # retrying and discarding it, so later iterations can see that
+            # this approach failed and why.
+            return {'combined_score': FAILED_PROGRAM_SCORE,
                     'eval_time': time.time() - start_time,
                     'error': err}
         scores.append(score)
@@ -431,7 +447,7 @@ def evaluate(program_path):
     _cleanup()
 
     if not scores:
-        return {'validity': -1,
+        return {'combined_score': FAILED_PROGRAM_SCORE,
                 'eval_time': time.time() - start_time,
                 'error': 'No instances evaluated'}
 
@@ -440,7 +456,7 @@ def evaluate(program_path):
 
 if __name__ == "__main__":
     import sys
-    path = sys.argv[1] if len(sys.argv) > 1 else __file__.replace('evaluator.py', 'initial_program_harness.py')
+    path = sys.argv[1] if len(sys.argv) > 1 else __file__.replace('evaluator_penalize_failures.py', 'initial_program_harness.py')
     result = evaluate(path)
     for k, v in result.items():
         print(f"  {k}: {v}")
