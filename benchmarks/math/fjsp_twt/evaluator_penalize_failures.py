@@ -21,6 +21,13 @@ combined_score (instead of validity=-1) so it is recorded in the population
 with a heavily penalized score and its error is visible in later context,
 rather than being silently retried and dropped. See evaluator.py for the
 unmodified baseline behavior.
+
+Instances are evaluated concurrently (MAX_WORKERS threads, each driving one
+subprocess). This is only sound because the per-call timeout is charged in CPU
+time (ITIMER_VIRTUAL) rather than wall clock: under the old wall-clock timer,
+concurrent load would spuriously kill programs that were merely descheduled.
+Scores are unaffected by concurrency - instances are independent and the score
+is their median.
 """
 
 import json
@@ -30,8 +37,10 @@ import statistics
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import traceback
+from concurrent.futures import ThreadPoolExecutor
 
 
 INSTANCES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instances')
@@ -59,6 +68,37 @@ SUBPROCESS_FALLBACK_S = 60
 # Fixed penalty applied to the whole program if any single instance fails
 # (timeout, invalid schedule, or error).
 FAILED_PROGRAM_SCORE = -100.0
+
+# Instances are independent, so they are evaluated concurrently. Each one is
+# already its own subprocess, so threads only wait on those - the GIL is not a
+# constraint. Default leaves headroom for a second run on the same box; set
+# FJSP_EVAL_WORKERS to override, or 1 to force the old sequential behaviour.
+# Safe only because the per-call timeout is CPU-time based (ITIMER_VIRTUAL):
+# under a wall-clock timer, concurrency would spuriously kill slow-scheduled
+# programs.
+def _default_workers():
+    try:
+        return max(1, min(8, (os.cpu_count() or 2) - 2))
+    except Exception:
+        return 4
+
+MAX_WORKERS = int(os.environ.get('FJSP_EVAL_WORKERS', '0')) or _default_workers()
+
+# Print failing subprocesses' full tracebacks. Off by default - see the call site.
+VERBOSE_STDERR = os.environ.get('FJSP_EVAL_VERBOSE', '') not in ('', '0')
+
+
+def _failed_objectives():
+    """Worst possible value for every objective this evaluator reports.
+
+    fraction_positive is bounded below by 0.0, so that is its floor; the other
+    two use the standard failure penalty.
+    """
+    return {
+        'combined_score':    FAILED_PROGRAM_SCORE,
+        'q10_score':         FAILED_PROGRAM_SCORE,
+        'fraction_positive': 0.0,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -259,9 +299,21 @@ def run_program_on_instance(program_path, instance, timeout_seconds=60):
     results_path = instance_path + '.results'
 
     script = f"""
+import os as _os
+# Pin BLAS/OpenMP to a single thread. This must happen before numpy is
+# imported. Two reasons: (1) the per-call budget is charged in CPU time summed
+# over all threads of the process, so a multi-threaded numpy call would burn
+# the budget N times faster and be killed spuriously; (2) it stops N concurrent
+# instances each spawning their own BLAS pool and oversubscribing the machine.
+# It also closes a loophole in the old wall-clock timer, under which a program
+# could buy extra compute per call simply by threading.
+for _var in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS",
+             "NUMEXPR_NUM_THREADS", "VECLIB_MAXIMUM_THREADS"):
+    _os.environ[_var] = "1"
+
 import sys, os, json, pickle, traceback, importlib.util
 import numpy  # pre-import so a cold `import numpy` inside schedule_next
-              # (running under the per-call SIGALRM) doesn't blow the budget
+              # (running under the per-call timer) doesn't blow the budget
 
 try:
     with open('{instance_path}') as f:
@@ -301,18 +353,22 @@ try:
     def _alarm(sig, frame):
         raise TimeoutError(f"schedule_next exceeded per-call limit")
 
-    _signal.signal(_signal.SIGALRM, _alarm)
+    # ITIMER_VIRTUAL charges CPU time actually burned by this process rather
+    # than wall clock, so a program is never killed merely for being
+    # descheduled while sibling instances evaluate concurrently. It delivers
+    # SIGVTALRM, not SIGALRM.
+    _signal.signal(_signal.SIGVTALRM, _alarm)
 
     def _timed(**kwargs):
         n_feas = _count_feasible(kwargs['unscheduled'], kwargs['instance'])
         limit  = _K * n_feas + _BASE
-        _signal.setitimer(_signal.ITIMER_REAL, limit)
-        _t0 = _time.perf_counter()
+        _signal.setitimer(_signal.ITIMER_VIRTUAL, limit)
+        _t0 = _time.process_time()
         try:
             r = _fn(**kwargs)
         finally:
-            _signal.setitimer(_signal.ITIMER_REAL, 0)
-        dt = _time.perf_counter() - _t0
+            _signal.setitimer(_signal.ITIMER_VIRTUAL, 0)
+        dt = _time.process_time() - _t0
         _call_count[0] += 1
         _max_call[0]    = max(_max_call[0], dt)
         _call_times.append(dt)
@@ -359,7 +415,12 @@ except Exception as e:
         )
         try:
             stdout, stderr = process.communicate(timeout=timeout_seconds)
-            if stderr:
+            if stderr and VERBOSE_STDERR:
+                # Off by default: with MAX_WORKERS instances in flight, a
+                # failing program prints the same traceback once per worker.
+                # The concise reason is returned as `error` regardless and is
+                # what the run log records. Set FJSP_EVAL_VERBOSE=1 to see the
+                # full tracebacks while debugging a program by hand.
                 print(f"Subprocess stderr: {stderr.decode()}", flush=True)
             if process.returncode != 0:
                 raise RuntimeError(f"Process exited with code {process.returncode}")
@@ -427,31 +488,77 @@ def evaluate(program_path):
         except OSError:
             pass
 
+    paths = [p for p in EVAL_INSTANCES if os.path.exists(p)]
+
+    # Prime the CS baseline cache before any worker starts, so threads don't
+    # race to load the same pickle.
+    _get_cs_baselines()
+
+    # One instance per worker thread. The first failure aborts the rest: the
+    # program is penalized as a whole, so remaining instances cannot change
+    # the outcome. Instances already in flight are left to finish (each is
+    # capped by SUBPROCESS_FALLBACK_S) rather than killed mid-run.
+    abort = threading.Event()
+    first_error = [None]
     scores = []
-    for path in EVAL_INSTANCES:
-        if not os.path.exists(path):
-            continue
+    scores_lock = threading.Lock()
+
+    def _work(path):
+        if abort.is_set():
+            return
         score, err = _score_instance(program_path, path)
         if err:
-            _cleanup()
-            # Penalize the whole program instead of dropping it: a valid
-            # (non-error-flagged) combined_score means the search controller
-            # records this program in the population rather than silently
-            # retrying and discarding it, so later iterations can see that
-            # this approach failed and why.
-            return {'combined_score': FAILED_PROGRAM_SCORE,
-                    'eval_time': time.time() - start_time,
-                    'error': err}
-        scores.append(score)
+            abort.set()
+            with scores_lock:
+                if first_error[0] is None:
+                    first_error[0] = err
+            return
+        with scores_lock:
+            scores.append(score)
+
+    executor = ThreadPoolExecutor(max_workers=MAX_WORKERS)
+    try:
+        list(executor.map(_work, paths))
+    finally:
+        executor.shutdown(wait=True)
+
+    if first_error[0] is not None:
+        _cleanup()
+        # Penalize the whole program instead of dropping it: a valid
+        # (non-error-flagged) combined_score means the search controller
+        # records this program in the population rather than silently
+        # retrying and discarding it, so later iterations can see that
+        # this approach failed and why.
+        #
+        # Every objective must be given an explicitly terrible value, not just
+        # combined_score. UnifiedArchive reads objectives as
+        # metrics.get(key, 0.0), so an omitted objective becomes 0.0 - which
+        # would beat a legitimate program scoring below zero on that axis and
+        # let failures dominate the Pareto front on objectives they never
+        # earned.
+        return {**_failed_objectives(),
+                'eval_time': time.time() - start_time,
+                'error': first_error[0]}
 
     _cleanup()
 
     if not scores:
-        return {'combined_score': FAILED_PROGRAM_SCORE,
+        return {**_failed_objectives(),
                 'eval_time': time.time() - start_time,
                 'error': 'No instances evaluated'}
 
-    return {'combined_score': statistics.median(scores)}
+    # Always report the full metric set. Whether a run is single- or
+    # multi-objective is decided by the config's `pareto_objectives` list, not
+    # here: leave it empty and the extra metrics are merely recorded alongside
+    # each program; list them and the same numbers drive Pareto ranking. They
+    # cost nothing extra - all three come from the same per-instance scores.
+    scores.sort()
+    n = len(scores)
+    return {
+        'combined_score':    statistics.median(scores),          # fitness
+        'q10_score':         scores[max(0, int(0.10 * n))],       # worst-decile robustness
+        'fraction_positive': sum(1 for s in scores if s > 0) / n, # how often it beats CS
+    }
 
 
 if __name__ == "__main__":
