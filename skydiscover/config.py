@@ -448,6 +448,14 @@ class AdaEvolveDatabaseConfig(DatabaseConfig):
     pareto_objectives: List[str] = field(default_factory=list)
     pareto_objectives_weight: float = 0.0
 
+    # Per-island archive scoring presets, by island index, e.g.
+    # ["quality", "pareto"]. Names come from ISLAND_CONFIG_PRESETS. Islands
+    # without an entry keep the global fitness/novelty/pareto weights, so
+    # leaving this empty reproduces the previous behaviour exactly. Before
+    # this, only dynamically spawned islands could ever differ from
+    # "balanced".
+    island_configs: List[str] = field(default_factory=list)
+
 
 @dataclass
 class OpenEvolveNativeDatabaseConfig(DatabaseConfig):

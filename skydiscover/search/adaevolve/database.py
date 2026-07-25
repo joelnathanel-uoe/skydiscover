@@ -291,17 +291,39 @@ class AdaEvolveDatabase(ProgramDatabase):
         pareto_objectives_weight = getattr(config, "pareto_objectives_weight", 0.0)
         self._diversity_strategy_type = getattr(config, "diversity_strategy", "code")
 
+        # Optional per-island presets. Without them every static island is
+        # scored identically, which is why islands have never differentiated
+        # in practice - only dynamically spawned ones could pick a preset.
+        island_configs = getattr(config, "island_configs", None) or []
+
         for i in range(self.num_islands):
+            preset = None
+            if i < len(island_configs) and island_configs[i]:
+                # Raises on an unknown name, so a typo fails at startup rather
+                # than silently running a differently-weighted experiment.
+                preset = get_island_config_preset(island_configs[i])
+                self.island_config_names[i] = island_configs[i]
+
+            # A preset's pareto_weight is also used as this island's
+            # pareto_objectives_weight: when explicit objectives are
+            # configured, UnifiedArchive scores the Pareto component through
+            # pareto_objectives_weight and ignores pareto_weight, so an island
+            # asked to be Pareto-focused would otherwise not actually be.
             archive_config = ArchiveConfig(
                 max_size=config.population_size,
                 k_neighbors=getattr(config, "k_neighbors", 5),
-                elite_ratio=getattr(config, "archive_elite_ratio", 0.2),
-                pareto_weight=getattr(config, "pareto_weight", 0.4),
-                fitness_weight=getattr(config, "fitness_weight", 0.3),
-                novelty_weight=getattr(config, "novelty_weight", 0.3),
+                elite_ratio=(preset["elite_ratio"] if preset
+                             else getattr(config, "archive_elite_ratio", 0.2)),
+                pareto_weight=(preset["pareto_weight"] if preset
+                               else getattr(config, "pareto_weight", 0.4)),
+                fitness_weight=(preset["fitness_weight"] if preset
+                                else getattr(config, "fitness_weight", 0.3)),
+                novelty_weight=(preset["novelty_weight"] if preset
+                                else getattr(config, "novelty_weight", 0.3)),
                 higher_is_better=higher_is_better,
                 pareto_objectives=pareto_objectives,
-                pareto_objectives_weight=pareto_objectives_weight,
+                pareto_objectives_weight=(preset["pareto_weight"] if preset
+                                          else pareto_objectives_weight),
                 fitness_key=getattr(config, "fitness_key", None),
             )
 
@@ -324,6 +346,11 @@ class AdaEvolveDatabase(ProgramDatabase):
             f"Initialized {self.num_islands} archives: "
             f"max_size={config.population_size}, diversity={self._diversity_strategy_type}"
         )
+        if island_configs:
+            # INFO, not DEBUG: island scoring weights are otherwise absent from
+            # every run artifact, so a differentiated run would leave no record
+            # of which island was weighted how.
+            logger.info(f"Per-island archive configs: {self.island_config_names}")
 
     # =========================================================================
     # Population Storage Access
