@@ -80,7 +80,7 @@ prompt:
     Restrictions: Python standard library + numpy only.
 
 evaluator:
-  timeout: 300
+  timeout: 400
   cascade_evaluation: false
 
 search:

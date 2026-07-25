@@ -55,18 +55,71 @@ prompt:
       instance          n_jobs, n_machines, jobs[{release_time, due_date, weight,
                           operations: [[[machine_id, proc_time], ...], ...]}]
 
+    --- Domain background: classical dispatching rules ---
+
+    Construction heuristics for this problem typically score every ready
+    operation on every eligible machine with a priority rule, then repeatedly
+    dispatch whichever (operation, machine) pair scores best. These are the
+    building blocks strong classical rules are made of — useful vocabulary,
+    not a formula to copy unmodified:
+
+      Slack and the internal due date. A job's own due date d_i only applies
+      to its LAST operation. To judge urgency of an earlier operation v,
+      rules apportion d_i backward across the job's remaining work:
+          d_v   = d_i - FF * (sum of min processing times over operations
+                  of this job AFTER v)
+          slack = d_v - t     (t = the earliest time this candidate could
+                                start, i.e. its EFT decision time)
+      FF ("flow factor") is an instance-specific constant capturing how
+      stretched-out jobs tend to become end-to-end relative to raw work
+      content. Negative or small slack means this operation is urgent.
+
+      ATC (Apparent Tardiness Cost) — the strongest classical single rule
+      for this problem. Priority of candidate (operation v on machine m,
+      processing time p_v):
+          priority = (w_i / p_v) * exp( -max(slack, 0) / (kappa * p_bar) )
+      where w_i is the job's weight, p_bar is the average remaining
+      processing time across all CURRENTLY ready candidates, and kappa is a
+      lookahead/urgency parameter. Small kappa makes the rule myopic (chase
+      whichever job is in danger right now); large kappa makes it behave
+      more like plain weighted-SPT (ignore due dates, prefer fast jobs).
+      There is no single best kappa — it depends on how tight due dates are
+      relative to workload, and that tightness can differ across instances
+      AND across different points within the same instance's schedule.
+
+      Machine load / congestion. Always dispatching whichever single
+      operation currently scores best (by any of the rules above) can
+      repeatedly route work onto an already-backed-up machine while an
+      equally-eligible, idle machine sits unused. None of the classical
+      rules below look at machine queue length or congestion directly —
+      worth considering as an additional signal, not just per-operation
+      urgency.
+
+      Other classical rules built from the same ingredients: FIFO/WFIFO
+      (ready time, weighted by 1/w_i), SPT/WSPT (processing time, weighted),
+      MOD/WMOD and ODD/WODD (variants combining the internal due date d_v
+      above with processing time or start time). Every one of these is a
+      SINGLE FIXED formula applied identically to every operation in every
+      instance — none of them adapt their own parameters based on how the
+      partial schedule looks so far, and none look ahead beyond the one
+      operation being placed right now. That is the design space this
+      family of rules occupies; you are not restricted to it.
+
     --- Scoring ---
 
-    We score your function by running it on 50 benchmark instances and taking
-    the median of the following quantity:
+    We score your function by running it on 50 benchmark instances and
+    taking the median of:
 
       score = (cs_twt - your_twt) / cs_twt
 
-    where cs_twt is a strong baseline: for each instance, it is the best result
-    achieved by a range of classical scheduling heuristics (e.g. shortest
-    processing time, earliest due date, and apparent tardiness cost rules),
-    each evaluated on that instance. Your goal is for schedule_next to produce
-    a schedule that beats the best of these classical rules.
+    where cs_twt is the Combined Scheduler (CS) baseline (Sobeyko & Mönch,
+    2016): for each instance, CS runs FIFO, WFIFO, ODD, WODD, MOD, WMOD,
+    SPT, WSPT, and ATC swept over 70 values of kappa (0.1 to 7.0) — all
+    using earliest-finish-time machine selection — and takes whichever of
+    these ~78 schedules has the lowest total weighted tardiness on THAT
+    instance. This is a strong, per-instance-optimized baseline: beating it
+    means beating not just one fixed rule, but the best of an entire
+    portfolio of them, re-picked per instance.
 
     A positive score means your schedule achieved lower tardiness than the
     baseline. A score of 0 means you tied it; negative means you did worse. If
@@ -113,7 +166,7 @@ search:
 
 monitor:
   enabled: true
-  port: 8768
+  port: 8772
   host: "127.0.0.1"
 
 human_feedback_enabled: true

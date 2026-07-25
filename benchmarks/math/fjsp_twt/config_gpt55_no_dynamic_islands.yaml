@@ -57,7 +57,7 @@ prompt:
 
     --- Scoring ---
 
-    We score your function by running it on 100 benchmark instances and taking
+    We score your function by running it on 50 benchmark instances and taking
     the median of the following quantity:
 
       score = (cs_twt - your_twt) / cs_twt
@@ -84,7 +84,7 @@ prompt:
     Restrictions: Python standard library + numpy only.
 
 evaluator:
-  timeout: 300
+  timeout: 400
   cascade_evaluation: false
 
 search:

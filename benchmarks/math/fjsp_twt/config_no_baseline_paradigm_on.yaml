@@ -57,14 +57,14 @@ prompt:
 
     --- Scoring ---
 
-    We score your function by running it on 100 benchmark instances and taking
+    We score your function by running it on 50 benchmark instances and taking
     the median TWT. Your aim is to minimise this — the lower the better. If your
     function produces an invalid schedule or times out on any instance, the entire
     program is invalid.
 
     Restrictions: Python standard library + numpy only.
 evaluator:
-  timeout: 300
+  timeout: 400
   cascade_evaluation: false
 
 search:
