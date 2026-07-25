@@ -62,3 +62,7 @@ tasks/
 # Dissertation generated outputs
 Dissertation Project/run_summaries/
 Dissertation Project/instance_study/
+
+# Convenience symlinks with absolute targets (not portable, not part of the project)
+Dissertation Project/skydiscover
+Dissertation Project/fjsp papers/sobeyko_monch_2016.pdf
