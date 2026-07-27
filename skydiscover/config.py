@@ -34,6 +34,8 @@ _PROVIDERS: Dict[str, tuple] = {
     "huggingface": (None, ["HF_TOKEN", "HUGGINGFACE_API_KEY"]),
     "ollama": (None, []),
     "vllm": (None, []),
+    # Headless Claude Code CLI on subscription auth; no API base or key.
+    "claude-code": (None, []),
 }
 
 # Bare model-name prefixes → provider  (backwards compat for --model gpt-5, etc.)
@@ -197,6 +199,10 @@ class LLMConfig(LLMModelConfig):
         for model in self.models + self.evaluator_models + self.guide_models:
             if model.name and model.api_base is None:
                 provider, bare_name, provider_base, env_vars = _parse_model_spec(model.name)
+                if provider == "claude-code" and model.init_client is None:
+                    from skydiscover.llm.claude_code import ClaudeCodeLLM
+
+                    model.init_client = ClaudeCodeLLM
                 # Skip provider URL only for unrecognized bare names that fell
                 # through to the OpenAI default — never for an explicitly-prefixed
                 # provider (e.g. "anthropic/claude-3-sonnet") or a known bare prefix.
