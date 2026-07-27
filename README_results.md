@@ -26,7 +26,7 @@ Score = `combined_score` (higher is better, range 0–1).
 
 ### Option 1 — HTML summaries (no install needed)
 
-Open any file from `Dissertation Project/run_summaries/` directly in your browser. Each file contains the full iteration log for that run — metrics, code, and LLM interactions.
+Open any file from `run_summaries/` directly in your browser. Each file contains the full iteration log for that run — metrics, code, and LLM interactions.
 
 ### Option 2 — Live dashboard (interactive)
 

@@ -1,0 +1,24 @@
+# Standalone crate: detached from any parent workspace so it builds on its own.
+[workspace]
+
+[package]
+name = "jss-instance-gen"
+version = "0.1.0"
+edition = "2021"
+description = "Standalone generator for TIG job_scheduling (FJSP) benchmark instances"
+
+[dependencies]
+rand = { version = "0.8.5", default-features = false, features = [
+    "std",
+    "std_rng",
+    "small_rng",
+] }
+rand_distr = "0.4.3"
+
+[[bin]]
+name = "jss-instance-gen"
+path = "src/main.rs"
+
+[profile.release]
+lto = true
+codegen-units = 1

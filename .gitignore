@@ -59,21 +59,23 @@ eval_runs/
 # Local documentation
 tasks/
 
-# Dissertation generated outputs
-Dissertation Project/run_summaries/
-Dissertation Project/instance_study/
+# Generated run outputs
+run_summaries/
 
-# Convenience symlinks with absolute targets (not portable, not part of the project)
-Dissertation Project/skydiscover
-Dissertation Project/fjsp papers/sobeyko_monch_2016.pdf
+# Rust build artifacts of the instance generator
+tools/jss-instance-gen/target/
+
+# The dissertation workspace is local-only and never tracked: writing material,
+# drafts, reference papers, spreadsheets, and the instance study. Analysis
+# tooling that used to live here now lives in tools/ and IS tracked.
+Dissertation Project/
 
 # Reference documents and spreadsheets are kept locally, never committed:
 # publisher PDFs are copyrighted, and binary spreadsheets don't diff.
 *.pdf
 *.xlsx
 *.xls
-Dissertation Project/karim_response_per_instance.csv
 fjsp_twt_results.zip
 # ...but instance manifests are provenance (they record each instance's seed)
 !benchmarks/math/fjsp_twt/instances/*/manifest.csv
-!Dissertation Project/jss-instance-gen/instances/manifest.csv
+!tools/jss-instance-gen/instances/manifest.csv
