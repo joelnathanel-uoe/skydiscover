@@ -6,9 +6,9 @@ max_solution_length: 60000
 
 llm:
   models:
-    - name: "gpt-5.5"
+    - name: "claude-code/claude-opus-5"
       weight: 1.0
-  max_tokens: 16384
+  # max_tokens is not settable through the Claude Code CLI backend and is ignored.
   timeout: 600
 
 prompt:
