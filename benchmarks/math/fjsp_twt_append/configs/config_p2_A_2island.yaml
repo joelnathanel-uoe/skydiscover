@@ -17,9 +17,9 @@ max_solution_length: 60000
 
 llm:
   models:
-    - name: "gpt-5.5"
+    - name: "claude-code/claude-opus-5"
       weight: 1.0
-  max_tokens: 16384
+  # max_tokens is not settable through the Claude Code CLI backend and is ignored.
   timeout: 600
 
 prompt:
@@ -42,34 +42,35 @@ prompt:
     --- The appending scheme ---
 
     A construction heuristic builds a complete schedule step by step,
-    scheduling one operation per step. Two general schemes exist. Under
-    APPENDING, the chosen operation is placed at the END of the chosen
-    machine's current sequence and started as early as possible. Under
-    INSERTING, it may be placed at any feasible position within a machine's
-    sequence, shifting already-scheduled operations if necessary.
-
-    This task is exclusively the appending scheme. It is enforced by the
-    harness, not left to you: you never choose a position, and the operation
-    you pick is always appended and started as early as possible.
+    scheduling one operation per step. The chosen operation is placed at the
+    END of the chosen machine's current sequence and started as early as
+    possible. You never choose a position: the harness always appends the
+    operation you pick and starts it as early as possible.
 
     --- Anatomy of a construction step ---
 
-    The appending scheme fixes most of the machinery. The design freedom is
-    concentrated in two places. Each step:
+    Every step has four stages. THE HARNESS PERFORMS THE FIRST AND THE LAST.
+    YOU DESIGN THE TWO IN BETWEEN, AND NOTHING ELSE.
 
-      1. CANDIDATE GENERATION (fixed — the harness does this). The available
+      1. CANDIDATE GENERATION — performed by the harness. The available
          operations are the next unscheduled operations of jobs whose preceding
          operations have all been scheduled. Each available operation o, paired
          with an eligible machine m, forms a candidate with earliest start
          s(o,m) = max(job ready time, machine free time) and earliest
-         completion e(o,m) = s(o,m) + p(o,m).
-      2. RESTRICTION — WHO COMPETES (design choice 1). A rule that reduces the
-         candidate set to a subset before any preference is expressed.
-      3. SELECTION — WHO WINS (design choice 2). A decision function that picks
-         exactly one candidate from the subset.
-      4. UPDATE (fixed — the harness does this). The chosen operation is
-         appended to its machine at its earliest start; ready times are
-         updated.
+         completion e(o,m) = s(o,m) + p(o,m). The finished set is handed to you.
+      2. RESTRICTION — WHO COMPETES — yours (design choice 1). A rule that
+         reduces the candidate set to a subset before any preference is
+         expressed.
+      3. SELECTION — WHO WINS — yours (design choice 2). A decision function
+         that picks exactly one candidate from that subset.
+      4. UPDATE — performed by the harness. The candidate you returned is
+         appended to its machine at its earliest start, and ready times are
+         updated for the next step.
+
+    So the whole of your contribution is: you receive a set of candidates and
+    you return one of them. Constructing the candidates, appending the winner,
+    computing start times and maintaining the schedule all happen outside your
+    function, and you cannot influence them.
 
     An appending heuristic is therefore fully described by its RESTRICTION RULE
     and its SELECTION FUNCTION. Your heuristic must be expressible in these
@@ -194,16 +195,19 @@ prompt:
                           weight, operations: [[[machine_id, proc_time], ...],
                           ...]}]
 
-    You must return one of the candidates you were given. A tuple equal to one
-    of them is accepted, so you may rebuild it, but a candidate that matches
-    none of them is rejected and the program fails — you cannot invent a start
-    time, choose a machine that was not offered, or schedule an operation that
-    is not yet available.
+    The only decision you make is WHICH CANDIDATE IS SCHEDULED NEXT. Return one
+    of the candidates you were given. Returning a tuple equal to one of them is also
+    accepted, so you may rebuild it rather than passing the object through,
+    but anything that matches none of the offered candidates is rejected and
+    the program fails. Concretely, this means you cannot invent a start time,
+    pick a machine that was not offered for that operation, or schedule an
+    operation whose predecessor is still unscheduled — none of those appear
+    among your candidates.
 
     --- Scoring ---
 
-    We score your function by running it on 50 benchmark instances and taking
-    the median of the following quantity:
+    We score your function by running it on several benchmark instances and
+    taking the median of the following quantity:
 
       score = (cs_twt - your_twt) / cs_twt
 
@@ -215,11 +219,12 @@ prompt:
     function errors or exceeds its time budget on any instance, the program
     scores -100.
 
-    A design is judged by the tardiness of the schedules it completes AND by
-    its simplicity: the fewer parameters the better, and any parameter used
-    should be easily interpretable — a quantity with a clear scheduling
-    meaning rather than an opaque tuning constant. Prefer a design whose
-    behaviour you can explain to one that merely fits.
+    Your objective is to make this score as high as you can. Subject to that,
+    keep the design simple: use as few parameters as possible, and make every
+    parameter you do use interpretable — a quantity with a clear scheduling
+    meaning rather than an opaque tuning constant. Between two designs that
+    schedule comparably well, the one whose behaviour can be explained is the
+    better design.
 
     --- Constraints ---
 
@@ -243,8 +248,8 @@ search:
   type: adaevolve
   num_context_programs: 1
   database:
-    num_islands: 1
-    population_size: 10
+    num_islands: 2
+    population_size: 5
     migration_interval: 30
     migration_count: 1
     fitness_key: combined_score
@@ -252,8 +257,9 @@ search:
       combined_score: true
     fitness_weight: 0.7
     novelty_weight: 0.3
+    island_configs: [quality, diversity]
     use_paradigm_breakthrough: true
-    use_dynamic_islands: false
+    use_dynamic_islands: true
 
 monitor:
   enabled: true
