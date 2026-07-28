@@ -60,6 +60,9 @@ llm:
 | DeepSeek | `deepseek-chat` or `deepseek/deepseek-chat` | DEEPSEEK_API_KEY |
 | Mistral | `mistral-large` or `mistral/mistral-large` | MISTRAL_API_KEY |
 | Ollama / vLLM | `ollama/llama3`, `vllm/my-model` | — |
+| Claude Code (subscription) | `claude-code/claude-sonnet-5` | — (uses your `claude` CLI login) |
+
+**Claude Code backend** — `claude-code/<model>` runs generations through the headless Claude Code CLI (`claude -p`) on the Claude subscription you are logged into, instead of a metered API key. Requires the [`claude` CLI](https://code.claude.com) on PATH and a `claude /login` (or `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token`). Each call is fully sandboxed — no tools, files, or MCP context — so the model sees exactly what an API call would. Any Claude model or alias works, e.g. `claude-code/claude-opus-5` or `claude-code/haiku`. Note: `temperature`, `top_p`, and `max_tokens` are not supported by the CLI and are ignored; `reasoning_effort` is supported.
 
 <details>
 <summary><b>Single model, multi-model pool, separate pools, and API override examples</b></summary>
