@@ -7,8 +7,8 @@ many instances to disk in the standard FJSP benchmark text format, extended with
 per-job due dates and weights the TWT objective needs.
 
 It has **no dependency on the TIG monorepo** — only two common crates (`rand`,
-`rand_distr`). The core generator is copied verbatim from TIG, so the instances it
-produces are **bit-identical** to the ones TIG generates for the same seed and scenario.
+`rand_distr`). The core generator preserves TIG's RNG sequence, but deliberately floors
+generated due dates rather than using TIG's rounding behavior.
 
 ---
 
@@ -31,14 +31,15 @@ The binary is produced at `target/release/jss-instance-gen`.
 ## Usage
 
 ```bash
-jss-instance-gen <NUM_INSTANCES> <SCENARIO> [OUT_DIR]
+jss-instance-gen <NUM_INSTANCES> <SCENARIO> [OUT_DIR] [START_INDEX]
 ```
 
-| Argument          | Required | Description                                                            |
+| Argument          | Required | Description                                                           |
 | ----------------- | -------- | --------------------------------------------------------------------- |
-| `<NUM_INSTANCES>` | yes      | How many instances to generate, e.g. `100`.                           |
-| `<SCENARIO>`      | yes      | Shop type — one of the five scenarios listed below.                   |
-| `[OUT_DIR]`       | no       | Output directory. Defaults to `./instances`.                          |
+| `<NUM_INSTANCES>` | yes      | How many instances to generate, e.g. `100`.                            |
+| `<SCENARIO>`      | yes      | Shop type — one of the five scenarios listed below.                    |
+| `[OUT_DIR]`       | no       | Output directory. Defaults to `./instances`.                           |
+| `[START_INDEX]`   | no       | First deterministic seed and filename index. Defaults to `0`.          |
 
 ### Scenarios (shop types)
 
@@ -55,6 +56,9 @@ jss-instance-gen <NUM_INSTANCES> <SCENARIO> [OUT_DIR]
 ```bash
 # 100 medium-flexibility FJSP instances into ./benchmark
 ./target/release/jss-instance-gen 100 fjsp_medium ./benchmark
+
+# A disjoint set using deterministic seed/file indices 150 through 249
+./target/release/jss-instance-gen 100 fjsp_medium ./type_b 150
 ```
 
 You can also run it without building a standalone binary first:
@@ -62,6 +66,17 @@ You can also run it without building a standalone binary first:
 ```bash
 cargo run --release -- 100 fjsp_medium ./benchmark
 ```
+
+## Instance sets in this repository
+
+| Set | Location | Seed/file indices | Due-date setting | Speed factors |
+| --- | --- | --- | --- | --- |
+| Type A | `instances/` (mirrored at `../../benchmarks/math/fjsp_twt/instances/generated/`) | 0–99 | Historical output: `g = 0.5`, rounded | 0.8–1.2 |
+| Type B | `instances_type_b/` | 150–249 | `g = 0.75`, floored | 0.8–1.2 |
+| Type C | `type C instances/` | 250–349 | `g = 0.75`, floored | 0.2–1.8 |
+
+Indices 100–149 are already used by the separate test set at
+`../../benchmarks/math/fjsp_twt/instances/test/`, so Type B begins at 150.
 
 ---
 
@@ -87,8 +102,9 @@ benchmark/
 ### Reproducibility
 
 The set is fully reproducible: instance `i` is generated from a deterministic seed derived
-from its index, so running the same command again produces identical files. The exact seed
-used for each instance is recorded in `manifest.csv` (`seed_hex`).
+from its index, so running the same command again produces identical files. `START_INDEX`
+allows multiple sets to use disjoint index/seed ranges. The exact seed used for each instance
+is recorded in `manifest.csv` (`seed_hex`).
 
 > All TIG `job_scheduling` instances currently have **50 jobs**; the number of machines is
 > determined by the scenario (30 for most scenarios).

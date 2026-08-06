@@ -58,6 +58,8 @@ eval_runs/
 
 # Local documentation
 tasks/
+/ADAEVOLVE_EXPERIMENTS.md
+/FJSPDD Instances/
 
 # Generated run outputs
 run_summaries/

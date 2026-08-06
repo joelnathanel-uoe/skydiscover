@@ -1,11 +1,11 @@
 //! CLI wrapper around the `jss-instance-gen` library.
 //!
 //! Usage:
-//!     jss-instance-gen <NUM_INSTANCES> <SCENARIO> [OUT_DIR]
+//!     jss-instance-gen <NUM_INSTANCES> <SCENARIO> [OUT_DIR] [START_INDEX]
 //!
 //! See the README for details.
 
-use jss_instance_gen::{generate_instances, Scenario};
+use jss_instance_gen::{generate_instances_from_index, Scenario};
 use std::path::PathBuf;
 use std::process::exit;
 use std::str::FromStr;
@@ -14,15 +14,17 @@ const USAGE: &str = "\
 jss-instance-gen — generate TIG job_scheduling (FJSP) benchmark instances
 
 USAGE:
-    jss-instance-gen <NUM_INSTANCES> <SCENARIO> [OUT_DIR]
+    jss-instance-gen <NUM_INSTANCES> <SCENARIO> [OUT_DIR] [START_INDEX]
 
 ARGS:
     <NUM_INSTANCES>   How many instances to generate (e.g. 100)
     <SCENARIO>        One of: flow_shop | hybrid_flow_shop | job_shop | fjsp_medium | fjsp_high
     [OUT_DIR]         Output directory (default: ./instances)
+    [START_INDEX]     First deterministic seed/file index (default: 0)
 
 EXAMPLE:
     jss-instance-gen 100 fjsp_medium ./benchmark
+    jss-instance-gen 100 fjsp_medium ./type_b 150
 ";
 
 fn main() {
@@ -36,7 +38,10 @@ fn main() {
     let num_instances: usize = match args[1].parse() {
         Ok(n) => n,
         Err(_) => {
-            eprintln!("Error: NUM_INSTANCES must be a non-negative integer, got '{}'\n", args[1]);
+            eprintln!(
+                "Error: NUM_INSTANCES must be a non-negative integer, got '{}'\n",
+                args[1]
+            );
             print!("{}", USAGE);
             exit(1);
         }
@@ -53,7 +58,22 @@ fn main() {
 
     let out_dir = PathBuf::from(args.get(3).map(|s| s.as_str()).unwrap_or("instances"));
 
-    match generate_instances(num_instances, scenario, &out_dir, None) {
+    let start_index: u64 = match args.get(4) {
+        Some(value) => match value.parse() {
+            Ok(index) => index,
+            Err(_) => {
+                eprintln!(
+                    "Error: START_INDEX must be a non-negative integer, got '{}'\n",
+                    value
+                );
+                print!("{}", USAGE);
+                exit(1);
+            }
+        },
+        None => 0,
+    };
+
+    match generate_instances_from_index(num_instances, scenario, &out_dir, start_index, None) {
         Ok(paths) => {
             println!(
                 "Wrote {} instance(s) ({}) to {}",

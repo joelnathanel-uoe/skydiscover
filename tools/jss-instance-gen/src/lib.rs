@@ -4,11 +4,10 @@
 //! monorepo (`tig-challenges/src/job_scheduling/`). It has no dependency on the rest of
 //! the repo — only `rand` and `rand_distr`.
 //!
-//! IMPORTANT: `generate_instance` below is copied VERBATIM from the TIG challenge, including
-//! the exact RNG seeding chain and the exact order of every `rng` call. The generated
-//! instance is fully determined by that sequence, so the instances this crate produces are
-//! bit-identical to the ones TIG generates for the same seed and scenario. Do not reorder or
-//! "clean up" the body — doing so silently changes which instances come out.
+//! IMPORTANT: `generate_instance` below preserves the TIG challenge's exact RNG seeding chain
+//! and the exact order of every `rng` call. Due dates deliberately use `floor` instead of
+//! TIG's rounding behavior. Do not reorder or "clean up" RNG calls — doing so silently changes
+//! which instances come out.
 
 use rand::{
     distributions::Distribution,
@@ -112,9 +111,9 @@ impl FromStr for Scenario {
 // Challenge (instance) — the fields needed to describe & serialize an FJSP instance
 // ---------------------------------------------------------------------------
 
-// due-date tightness factor g (moderate regime):
+// due-date tightness factor g (loose regime):
 // d_j = DUE_DATE_TIGHTNESS * FF * avg_raw_processing_j
-const DUE_DATE_TIGHTNESS: f64 = 0.5;
+const DUE_DATE_TIGHTNESS: f64 = 0.75;
 
 #[derive(Debug, Clone)]
 pub struct Challenge {
@@ -132,13 +131,13 @@ pub struct Challenge {
 }
 
 impl Challenge {
-    /// VERBATIM copy of `Challenge::generate_instance` from
-    /// `tig-challenges/src/job_scheduling/mod.rs`, with the signature adapted to take a
-    /// `Scenario` directly (instead of a `Track`). The body — including the RNG seeding
-    /// and every `rng` call — is unchanged. This is the **total-weighted-tardiness**
-    /// version of the challenge: after the FJSP structure is built it derives a due date
-    /// and a weight for every job. Returns `Err` only if the internal FIFO pass stalls
-    /// (does not happen for well-formed instances).
+    /// Adapted from `Challenge::generate_instance` in
+    /// `tig-challenges/src/job_scheduling/mod.rs`, with the signature changed to take a
+    /// `Scenario` directly (instead of a `Track`) and due dates floored rather than rounded.
+    /// The RNG seeding and every `rng` call remain unchanged. This is the
+    /// **total-weighted-tardiness** version of the challenge: after the FJSP structure is
+    /// built it derives a due date and a weight for every job. Returns `Err` only if the
+    /// internal FIFO pass stalls (does not happen for well-formed instances).
     pub fn generate_instance(seed: &[u8; 32], scenario: Scenario) -> Result<Self, String> {
         let mut rng = SmallRng::from_seed(StdRng::from_seed(seed.clone()).r#gen());
         let ScenarioConfig {
@@ -156,8 +155,8 @@ impl Challenge {
         let flexibility_std_dev = 0.5;
         let base_proc_time_min = 1;
         let base_proc_time_max = 200;
-        let min_speed_factor = 0.8;
-        let max_speed_factor = 1.2;
+        let min_speed_factor = 0.2;
+        let max_speed_factor = 1.8;
 
         // random product for each job, only keep products that have at least one job
         let mut map = HashMap::new();
@@ -337,7 +336,7 @@ impl Challenge {
             .map(|j| {
                 let p = job_products[j];
                 (DUE_DATE_TIGHTNESS * ff * avg_raw_processing[p])
-                    .round()
+                    .floor()
                     .max(1.0) as u32
             })
             .collect();
@@ -552,24 +551,48 @@ pub fn generate_instances(
     out_dir: &Path,
     base_seed: Option<[u8; 32]>,
 ) -> std::io::Result<Vec<std::path::PathBuf>> {
+    generate_instances_from_index(num_instances, scenario, out_dir, 0, base_seed)
+}
+
+/// Generate a reproducible range of instances beginning at `start_index`.
+///
+/// Both filenames and deterministic seeds use the range
+/// `start_index..start_index + num_instances`. This permits multiple disjoint benchmark
+/// sets to be generated without reusing seeds.
+pub fn generate_instances_from_index(
+    num_instances: usize,
+    scenario: Scenario,
+    out_dir: &Path,
+    start_index: u64,
+    base_seed: Option<[u8; 32]>,
+) -> std::io::Result<Vec<std::path::PathBuf>> {
     std::fs::create_dir_all(out_dir)?;
 
-    let width = (num_instances.max(1) - 1).to_string().len().max(3);
+    let last_index = start_index
+        .checked_add(num_instances.saturating_sub(1) as u64)
+        .ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "instance index range exceeds u64",
+            )
+        })?;
+    let width = last_index.to_string().len().max(3);
     let mut paths = Vec::with_capacity(num_instances);
     let mut manifest = String::from("instance,file,scenario,num_jobs,num_machines,seed_hex\n");
 
-    for i in 0..num_instances {
-        let seed = seed_for_index(i as u64, base_seed);
+    for offset in 0..num_instances {
+        let index = start_index + offset as u64;
+        let seed = seed_for_index(index, base_seed);
         let ch = Challenge::generate_instance(&seed, scenario)
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
-        let filename = format!("instance_{:0width$}.txt", i, width = width);
+        let filename = format!("instance_{:0width$}.txt", index, width = width);
         let path = out_dir.join(&filename);
         std::fs::write(&path, ch.to_fjsp())?;
 
         let seed_hex: String = ch.seed.iter().map(|b| format!("{:02x}", b)).collect();
         manifest.push_str(&format!(
             "{},{},{},{},{},{}\n",
-            i, filename, scenario, ch.num_jobs, ch.num_machines, seed_hex
+            index, filename, scenario, ch.num_jobs, ch.num_machines, seed_hex
         ));
         paths.push(path);
     }
