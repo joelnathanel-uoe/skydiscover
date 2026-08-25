@@ -1,5 +1,5 @@
 """
-Evaluator for FJSP-TWT under the appending scheme (Phase 3, generalisation).
+Evaluator for FJSP-TWT under the appending scheme: generalisation over three instance types.
 
 Programs implement:
     choose_next(candidates, machine_sequences, machine_free, job_ready,

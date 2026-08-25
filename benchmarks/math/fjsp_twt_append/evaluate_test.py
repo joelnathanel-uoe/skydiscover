@@ -1,5 +1,5 @@
 """
-Evaluate a Phase 2 (append-only) program on the held-out test instances.
+Evaluate an appending program on the held-out test instances.
 
 Usage:
     python evaluate_test.py <program_path> [--verbose] [--workers N]
@@ -7,7 +7,7 @@ Usage:
 Reports median, mean, per-instance scores vs CS baseline, and win/loss counts.
 Run at the END of an experiment -- test instances are never seen during evolution.
 
-Test instances and their CS baselines are SHARED with Phase 1 (same absolute
+Test instances and their CS baselines are SHARED with the insertion benchmark (same absolute
 paths, same .cs_baselines_test.pkl), so scores are directly comparable and the
 held-out set stays held out. Evaluates instances concurrently: safe because the
 per-call program budget is charged in CPU time (ITIMER_VIRTUAL) inside each
@@ -114,7 +114,7 @@ def main():
 
     print()
     print(f"{'='*45}")
-    print(f"PHASE 2 TEST SET RESULTS ({len(paths)} instances, {elapsed:.1f}s)")
+    print(f"HELD-OUT TEST SET RESULTS ({len(paths)} instances, {elapsed:.1f}s)")
     print(f"{'='*45}")
     if scores:
         scores_sorted = sorted(scores)

@@ -1,5 +1,5 @@
 """
-Evaluator for FJSP-TWT under the appending scheme (Phase 3, loose-varied only).
+Evaluator for FJSP-TWT under the appending scheme: loose due dates with varied machine speeds.
 
 This is evaluator_generalise.py restricted to a SINGLE instance group. It is a
 probe of how much is available on the hardest type, not a generalisation arm:

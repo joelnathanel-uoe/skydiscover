@@ -34,6 +34,27 @@ SkyDiscover natively supports [Harbor](https://harborframework.com/)-format benc
 
 ---
 
+## This fork: FJSP-TWT
+
+This fork adds the flexible job shop scheduling problem with total weighted
+tardiness to SkyDiscover as a benchmark, and the material of an MSc
+dissertation that searched it for construction heuristics.
+
+- [`benchmarks/math/fjsp_twt_append`](benchmarks/math/fjsp_twt_append) — the
+  appending harness: a program builds a schedule one dispatch at a time,
+  appending each chosen operation to the end of a machine's sequence.
+- [`benchmarks/math/fjsp_twt_insertion`](benchmarks/math/fjsp_twt_insertion) —
+  the earlier insertion harness, where a program may place an operation
+  anywhere in a machine's sequence. It also holds the instances and cached
+  baselines both benchmarks use.
+- [`dissertation/`](dissertation) — the programs the write-up names, the tools
+  that produced its tables, and the published bounds those tables are measured
+  against.
+
+Everything else below is upstream SkyDiscover, unchanged.
+
+---
+
 ## 🏆 Benchmark Performance
 
 Across ~200 optimization benchmarks, AdaEvolve and EvoX achieve the strongest open-source results: matching or exceeding AlphaEvolve and human SOTA, and outperforming OpenEvolve, GEPA, and ShinkaEvolve under identical generation budgets.

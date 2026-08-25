@@ -1,13 +1,13 @@
 """
-Evaluate a Phase 2 (append-only) program on the academic instance sets
+Evaluate an appending program on the academic instance sets
 (Set_1..Set_4, .fjs format, Sobeyko & Moench 2016 style).
 
 Usage:
     python evaluate_academic.py <program_path> [--sets Set_1,Set_2,...] [--verbose] [--workers N]
 
-Mirrors Phase 1's evaluate_academic.py (same CS-baseline scoring, same per-program
+Mirrors the insertion benchmark's evaluate_academic.py (same CS-baseline scoring, same per-program
 results cache so an interrupted run resumes instead of restarting), but drives
-the append-only harness (choose_next) and reuses Phase 1's academic CS-baseline
+the append-only harness (choose_next) and reuses the insertion benchmark's academic CS-baseline
 cache directly, since baselines depend only on the instance and the classical
 portfolio, not on which harness scored the program.
 
@@ -29,7 +29,7 @@ from evaluator_penalize_failures import (
 ALL_SETS = ["Set_1", "Set_2", "Set_3", "Set_4"]
 ACADEMIC_CACHE_PATH = os.path.join(PHASE1_DIR, "instances", ".cs_baselines_academic.pkl")
 
-# Phase 2's own results cache directory, kept separate from Phase 1's so the
+# This benchmark's own results cache directory, kept separate from the insertion one so the
 # two phases' per-program caches (keyed by program path hash) never collide.
 RESULTS_DIR = os.path.join(BENCH, "instances")
 os.makedirs(RESULTS_DIR, exist_ok=True)
@@ -51,7 +51,7 @@ def load_cs_baselines_academic():
     if not os.path.exists(ACADEMIC_CACHE_PATH):
         raise FileNotFoundError(
             f"No cached CS baselines at {ACADEMIC_CACHE_PATH}. "
-            f"Run Phase 1's evaluate_academic.py once first to build it."
+            f"Run the insertion benchmark's evaluate_academic.py once first to build it."
         )
     with open(ACADEMIC_CACHE_PATH, "rb") as f:
         return pickle.load(f)
@@ -173,7 +173,7 @@ def main():
 
     print(flush=True)
     print("=" * 60, flush=True)
-    print(f"PHASE 2 ACADEMIC INSTANCE SET RESULTS ({len(entries)} instances, {elapsed:.1f}s this run)", flush=True)
+    print(f"ACADEMIC INSTANCE SET RESULTS ({len(entries)} instances, {elapsed:.1f}s this run)", flush=True)
     print("=" * 60, flush=True)
     for set_name in set_names:
         scores = per_set[set_name]

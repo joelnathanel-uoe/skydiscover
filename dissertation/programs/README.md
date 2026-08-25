@@ -52,9 +52,21 @@ budget on one held-out instance, so it has no held-out figure.
 ## Running one
 
 ```python
-from harness import run_instance          # benchmarks/math/fjsp_twt_append
-from importlib import import_module
+import sys, importlib
 
-prog = import_module("10_phase3_specialist")
-twt  = run_instance(instance, prog.choose_next)
+sys.path.insert(0, "benchmarks/math/fjsp_twt_append")
+sys.path.insert(0, "dissertation/programs")
+
+from harness import run_harness
+import evaluator_penalize_failures as ev
+
+instance = ev.parse_generated(
+    "benchmarks/math/fjsp_twt_insertion/instances/type_a_search/instance_000.txt")
+program = importlib.import_module("10_phase3_specialist")
+
+result = run_harness(instance, program.choose_next)
+print(result["twt"])          # total weighted tardiness of the schedule built
 ```
+
+`parse_generated` reads the generated instances; the academic sets are in a
+different format and are read by `ev.parse_instance` instead.

@@ -1,106 +1,74 @@
-# FJSP-TWT — appending construction heuristics (Phase 2)
+# FJSP-TWT — appending construction heuristics
 
-Discovery benchmark for the second experimental stage: evolving **appending**
-construction heuristics for the flexible job shop with total weighted tardiness.
+A SkyDiscover discovery benchmark: the flexible job shop scheduling problem with
+total weighted tardiness, searched over **appending** construction heuristics. A
+program builds a schedule one dispatch at a time, appending the operation it
+chooses to the end of a machine's sequence, started as early as it can be.
 
-Phase 1 lives in `../fjsp_twt_insertion/` and is deliberately left untouched, so its runs
-stay reproducible. This directory is a sibling, not a replacement.
+`../fjsp_twt_insertion/` is the sibling benchmark, where a program may place an
+operation anywhere in a machine's sequence. Appending is the restricted case:
+machine sequences cannot overlap and precedence cannot be violated, so every
+schedule is feasible by construction — no cycle checks, no rollback, and no
+class of infeasible-move failures.
 
-## Scope: appending only
+## What a program implements
 
-The study scopes this stage to appending schemes, excluding the more general inserting
-scheme (too complex for the timeline). The Phase 1 trajectory data independently
-supports that scoping — in run `fjsp_twt_0714_1406`:
+The harness generates the legal candidates and applies the one returned. The
+program decides which candidates compete and which of them wins, in a single
+function:
 
-- every program scoring >= 0.35 used strict non-delay dispatch (earliest
-  achievable start as primary key, i.e. effectively appending);
-- every attempt at delaying/shifting insertion failed (infeasible moves,
-  deadlock, or O(ops^3) timeouts);
-- even benign non-delaying gap-backfill scored bit-identically to its parent.
+```python
+def choose_next(candidates, machine_sequences, machine_free, job_ready,
+                job_next_op, instance):
+    # Restriction: which candidates compete
+    # Selection:   which of them wins
+    return one_candidate
+```
 
-So restricting to appending removes an entire failure class and loses nothing
-that ever helped. The design space comes from a supervisor-authored guidelines
-document (kept locally, not tracked in this repo), which frames an appending
-heuristic as two choices: a **restriction rule** (who competes) and a
-**selection function** (who wins). Both are reproduced in the system prompt in
-`configs/config_p2_A_1island.yaml`, so the design space the search was given is
-recoverable from the config alone.
+The split into a restriction and a selection is asked for in the prompt rather
+than enforced by the interface. Every config carries its prompt inline, so the
+design space a run was given can be read off the config alone.
 
-## Decisions, settled 2026-07-27
+## Scoring
 
-**Definition of appending.** Strict append to the end of the machine's sequence,
-started as early as possible — the definition in §1 of the guidelines. No
-non-delaying gap insertion. Enforced structurally: the program never sees a
-position argument and cannot express any other placement.
-
-**Harness interface.** The harness owns the two steps the guidelines fix
-(candidate generation, update) and the program implements the two that are free
-(restriction, selection) inside a **single** function:
-
-    def choose_next(candidates, machine_sequences, machine_free, job_ready,
-                    job_next_op, instance):
-        # --- Restriction: who competes ---
-        # --- Selection: who wins ---
-        return one_candidate
-
-The restriction/selection split is requested **in the prompt**, not enforced by
-the interface. This is the cheaper first attempt: if the search produces
-programs where the two stages are fused or incoherent, the fallback is to split
-`choose_next` into separate `restrict` and `select` functions, which needs no
-harness change — the candidate set and state are already exactly what those two
-functions would receive.
-
-**Simplicity.** The guidelines judge designs partly on simplicity (few
-parameters, interpretable ones). This is stated in the prompt and each program
-is asked to self-report its restriction rule, selection function and parameters
-in a docstring. It is deliberately **not** scored: every automatic proxy (code
-length, constant count) is crude, and adding one to the fitness signal would
-make Phase 1 and Phase 2 scores non-comparable.
-
-## What the appending harness removes
-
-Phase 1's harness maintained a DAG so it could validate insertions: cycle
-checks, topological sort, rollback on infeasible moves. None of that survives
-here. With append-only placement at the earliest start, machine sequences cannot
-overlap and precedence cannot be violated, so **every schedule is feasible by
-construction** and there is no infeasible-move failure class at all.
-
-Confirmed on the seed program: `-9.241673534595261` (q10 `-11.378846252758477`,
-fraction_positive `0.0`), bit-identical to the Phase 1 seed, which is
-behaviourally the same heuristic. Evaluation takes 2.5s against Phase 1's 11.4s.
+Each instance carries a baseline: the lowest total weighted tardiness reached by
+the combined scheduler of Sobeyko and Mönch (2016) — the classical dispatching
+rules, with the apparent tardiness cost rule at seventy values of its parameter.
+A program's score is the median proportional reduction on that baseline over the
+evaluation set. A program that returns an illegal move, raises, or exceeds the
+per-call time budget scores −100 for the whole set, so one that broke is never
+mistaken for one that merely scheduled badly.
 
 ## Layout
 
-    harness.py                        appending harness
-    evaluator_penalize_failures.py    scoring; -100 for any failing instance
-    configs/config_p2_A_1island.yaml  run config (prompt is inline here)
-    seeds/initial_program_append.py   seed program
-    prompts/                          unused — configs carry the prompt inline
+```
+harness.py                       the appending harness
+seeds/                           seed programs a run starts from
+configs/                         run configs; each carries its prompt inline
+evaluator_penalize_failures.py   scoring on generated instances
+evaluator_generalise*.py         scoring over three instance types at once
+evaluator_loose_varied.py        scoring on loose due dates, varied machine speeds
+evaluate_academic.py             scoring on the academic sets
+evaluate_test.py                 scoring on the held-out generated instances
+prompts/                         unused; the configs carry the prompt inline
+```
 
-Instances and CS baselines are shared with Phase 1 (`../fjsp_twt_insertion/instances/`,
-`../fjsp_twt_insertion/.cs_baselines.pkl`) rather than copied: 100 generated train
-instances, 50 held-out generated test instances, and the four academic
-benchmark sets. Reusing the cached baselines makes Phase 1 and Phase 2 scores
-comparable by construction, and preserves the held-out status of the test set.
+Instances and their cached baselines live in `../fjsp_twt_insertion/instances/`
+and are shared rather than copied, so scores from the two benchmarks are
+comparable. The generator that produced them is in
+`dissertation/tools/jss-instance-gen/`.
 
 ## Run
 
-    cd /root/skydiscover
-    FJSP_EVAL_WORKERS=14 uv run skydiscover-run \
-        benchmarks/math/fjsp_twt_append/seeds/initial_program_append.py \
-        benchmarks/math/fjsp_twt_append/evaluator_penalize_failures.py \
-        --config benchmarks/math/fjsp_twt_append/configs/config_p2_A_1island.yaml \
-        --search adaevolve --model gpt-5.5 --iterations 200
+```bash
+uv run skydiscover-run \
+    benchmarks/math/fjsp_twt_append/seeds/initial_program_append.py \
+    benchmarks/math/fjsp_twt_append/evaluator_penalize_failures.py \
+    --config benchmarks/math/fjsp_twt_append/configs/config_p2_A_2island.yaml \
+    --search adaevolve --model <model> --iterations 200
+```
 
-Monitor on port 8790. Search settings copy Phase 1's `config_p1_A_1island.yaml`
-exactly, so the phases differ only in design space and guidance.
-
-## Not built yet
-
-- **Held-out test evaluation.** Phase 1's `evaluate_test.py` has no Phase 2
-  counterpart; needed after a run to report the generalization gap.
-- **A multi-island / multi-objective config** mirroring Phase 1's
-  `config_p1_B_2island_multiobj.yaml`, if the A/B contrast is wanted here too.
-- **Per-run config provenance** — configs are still edited in place and never
-  copied into the run directory, so a past run's exact config is unrecoverable.
-  Worth fixing before these runs, not after.
+`FJSP_EVAL_WORKERS=N` sets how many instances are scored in parallel. Left
+unset, the evaluators use `min(8, cpus - 2)`. The per-call budget is charged in
+CPU time rather than wall clock, so raising it does not penalise a program for
+contention.

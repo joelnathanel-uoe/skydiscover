@@ -1,5 +1,5 @@
 """
-Evaluator for FJSP-TWT under the appending scheme (Phase 2).
+Evaluator for FJSP-TWT under the appending scheme.
 
 Programs implement:
     choose_next(candidates, machine_sequences, machine_free, job_ready,
@@ -8,7 +8,7 @@ Programs implement:
 The harness (`harness.py` in this directory) generates the candidate set each
 step, appends the returned candidate to its machine, and updates the state.
 
-This is the Phase 1 `evaluator_penalize_failures.py` with four changes:
+This is the insertion benchmark's `evaluator_penalize_failures.py` with four changes:
   1. it drives the appending harness in this directory;
   2. it calls `choose_next` rather than `schedule_next`;
   3. the per-call budget counts the candidates the harness actually built,
