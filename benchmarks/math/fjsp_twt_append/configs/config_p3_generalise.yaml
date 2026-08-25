@@ -1,6 +1,6 @@
 # Phase 3 (generalisation, appending scheme).
 #
-# Base: config_p2mech_01_reference.yaml. Differs in exactly three things:
+# Base: the Phase 2 guided config, differing in exactly three things:
 #   1. system_message is phase3_generalise.txt, which differs from
 #      phase2_guided.txt in the Scoring section only.
 #   2. pareto_objectives are the three per-type medians rather than

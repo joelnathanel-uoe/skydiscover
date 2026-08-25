@@ -1,18 +1,54 @@
-# Migration x cross-island context, condition: ctxonly
-# no migration, but 2 local + 2 global context programs
-# Rig: 2 islands, pop 5, [quality, pareto], multiobjective, guided prompt.
-# num_context_programs raised 1 -> 4 so local_context_program_ratio actually does something.
+# Phase 2 (guided discovery, appending scheme) — Run 3.
+#
+# The multi-objective twin of Run 2. Three static islands with
+# different elite-score weightings, no migration, dynamic spawning capped at
+# eight, and Pareto optimisation over (q10_score, fraction_positive)
+# alongside combined_score.
+#
+# C and D differ in exactly three settings: pareto_objectives,
+# pareto_objectives_weight, and the two extra higher_is_better entries.
+# Everything else — prompt, seed, evaluator, model, islands, weightings,
+# budget — is identical, so the pair isolates multi-objective mode.
+#
+# See configuration C's header for the short-list mislabelling trap and for
+# why max_islands: 8 will NOT actually make dynamic spawning fire (the
+# binding constraint is spawn_productivity_threshold, ~30x below the
+# observed global_productivity). Both apply here identically.
+#
+#     island            fitness  novelty  pareto  elite_ratio
+#     0  quality          0.6      0.2     0.2       0.30
+#     1  balanced         0.3      0.3     0.4       0.20
+#     2  diversity        0.2      0.5     0.3       0.10
+#
+# Note that each preset's pareto weight becomes LIVE here and inert in C:
+# database.py:325 feeds preset["pareto_weight"] in as the island's
+# pareto_objectives_weight, and that value only does anything when
+# pareto_objectives is non-empty. So the weightings differ between C and D in
+# their effect as well as their nominal values — this is inherent to the
+# preset design, not something the config can separate.
+#
+# Island selection remains UCB, so the three islands do NOT receive equal
+# budget (p2B: island 0 took 73.8%). Report per-island iteration counts.
+#
+# In p2B, multi-objective earned its keep in the interior rather than at the
+# front: q10_score correlated 0.991 with combined_score, but the champion's
+# lineage passed through two steps that lost combined_score while gaining
+# q10_score, one surviving on protected_count in the Pareto island. Watch for
+# the same pattern here.
 
 language: python
 diff_based_generation: true
 max_iterations: 200
 checkpoint_interval: 5
 max_solution_length: 60000
+
 llm:
   models:
-  - name: claude-code/claude-opus-5
-    weight: 1.0
+    - name: "claude-code/claude-opus-5"
+      weight: 1.0
+  # max_tokens is not settable through the Claude Code CLI backend and is ignored.
   timeout: 600
+
 prompt:
   system_message: |
     You are an expert in combinatorial optimization and scheduling. Your task
@@ -35,9 +71,8 @@ prompt:
     A construction heuristic builds a complete schedule step by step,
     scheduling one operation per step. The chosen operation is placed at the
     END of the chosen machine's current sequence and started as early as
-    possible. You never choose a position: the harness — a fixed scheduling
-    loop that calls your function — always appends the operation you pick and
-    starts it as early as possible.
+    possible. You never choose a position: the harness always appends the
+    operation you pick and starts it as early as possible.
 
     --- Anatomy of a construction step ---
 
@@ -49,8 +84,7 @@ prompt:
          operations have all been scheduled. Each available operation o, paired
          with an eligible machine m, forms a candidate with earliest start
          s(o,m) = max(job ready time, machine free time) and earliest
-         completion e(o,m) = s(o,m) + p(o,m), p(o,m) being the processing time
-         of operation o using machine m. The finished set is handed to you.
+         completion e(o,m) = s(o,m) + p(o,m). The finished set is handed to you.
       2. RESTRICTION — WHO COMPETES — yours (design choice 1). A rule that
          reduces the candidate set to a subset before any preference is
          expressed.
@@ -146,8 +180,7 @@ prompt:
 
     --- What to write ---
 
-    Your task is to implement choose_next. Each call it receives that set of
-    candidates and returns one of them:
+    Implement a single function:
 
         def choose_next(candidates, machine_sequences, machine_free, job_ready,
                         job_next_op, instance):
@@ -193,13 +226,14 @@ prompt:
                           weight, operations: [[[machine_id, proc_time], ...],
                           ...]}]
 
-    The only decision you make is WHICH CANDIDATE IS SCHEDULED NEXT. Return
-    one of the candidates you were given, unmodified. Anything that does not
-    match one of the offered candidates is rejected and the program fails.
-    Concretely, this means you cannot invent a start time, pick a machine that
-    was not offered for that operation, or schedule an operation whose
-    predecessor is still unscheduled — none of those appear among your
-    candidates.
+    The only decision you make is WHICH CANDIDATE IS SCHEDULED NEXT. Return one
+    of the candidates you were given. Returning a tuple equal to one of them is also
+    accepted, so you may rebuild it rather than passing the object through,
+    but anything that matches none of the offered candidates is rejected and
+    the program fails. Concretely, this means you cannot invent a start time,
+    pick a machine that was not offered for that operation, or schedule an
+    operation whose predecessor is still unscheduled — none of those appear
+    among your candidates.
 
     --- Scoring ---
 
@@ -236,17 +270,18 @@ prompt:
     that step.
 
     Restrictions: Python standard library + numpy only.
+
 evaluator:
   timeout: 600
   cascade_evaluation: false
+
 search:
   type: adaevolve
-  num_context_programs: 4
+  num_context_programs: 1
   database:
-    num_islands: 2
+    num_islands: 3
     population_size: 5
-    migration_interval: 30
-    migration_count: 1
+    use_migration: false
     fitness_key: combined_score
     higher_is_better:
       combined_score: true
@@ -254,17 +289,17 @@ search:
       fraction_positive: true
     fitness_weight: 0.7
     novelty_weight: 0.3
-    pareto_objectives:
-    - q10_score
-    - fraction_positive
+    pareto_objectives: [q10_score, fraction_positive]
     pareto_objectives_weight: 0.4
-    island_configs:
-    - quality
-    - pareto
+    island_configs: [quality, balanced, diversity]
+    use_ucb_selection: true
     use_paradigm_breakthrough: true
-    use_dynamic_islands: false
-    use_migration: false
-    local_context_program_ratio: 0.6
+    use_dynamic_islands: true
+    max_islands: 8
+
 monitor:
-  enabled: false
+  enabled: true
+  port: 8793
+  host: "127.0.0.1"
+
 human_feedback_enabled: true

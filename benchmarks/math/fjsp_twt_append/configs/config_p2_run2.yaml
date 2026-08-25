@@ -1,40 +1,63 @@
-# Phase 2 (guided discovery, appending scheme) — configuration D.
+# Phase 2 (guided discovery, appending scheme) — Run 2.
 #
-# The multi-objective twin of configuration C. Three static islands with
-# different elite-score weightings, no migration, dynamic spawning capped at
-# eight, and Pareto optimisation over (q10_score, fraction_positive)
-# alongside combined_score.
+# Three static islands carrying different elite-score weightings, NO
+# migration, and dynamic spawning permitted up to eight islands. The seed,
+# evaluator, model and iteration budget are identical to configuration A;
+# the island structure is the experimental variable.
 #
-# C and D differ in exactly three settings: pareto_objectives,
-# pareto_objectives_weight, and the two extra higher_is_better entries.
-# Everything else — prompt, seed, evaluator, model, islands, weightings,
-# budget — is identical, so the pair isolates multi-objective mode.
+# The prompt is identical to configuration A's except for two edits, both
+# applied to C, D and E alike:
+#   1. "An appending heuristic is therefore..." now reads "Your appending
+#      heuristic is therefore...".
+#   2. A three-line bridging paragraph before "Design choice 1", stating that
+#      the heuristic may incorporate any of the mechanisms that follow, in
+#      any combination, or use one neither section names.
+# A and B are left untouched — their configs are the record of what those
+# completed runs actually sent. So C/D vs p2A/p2B is not a pure island-only
+# comparison; the prompt delta is three lines and one word, and should be
+# stated rather than ignored if the runs are compared directly.
 #
-# See configuration C's header for the short-list mislabelling trap and for
-# why max_islands: 8 will NOT actually make dynamic spawning fire (the
-# binding constraint is spawn_productivity_threshold, ~30x below the
-# observed global_productivity). Both apply here identically.
+# The three weightings form a monotone axis from fitness-focused to
+# novelty-focused:
 #
 #     island            fitness  novelty  pareto  elite_ratio
 #     0  quality          0.6      0.2     0.2       0.30
 #     1  balanced         0.3      0.3     0.4       0.20
 #     2  diversity        0.2      0.5     0.3       0.10
 #
-# Note that each preset's pareto weight becomes LIVE here and inert in C:
-# database.py:325 feeds preset["pareto_weight"] in as the island's
-# pareto_objectives_weight, and that value only does anything when
-# pareto_objectives is non-empty. So the weightings differ between C and D in
-# their effect as well as their nominal values — this is inherent to the
-# preset design, not something the config can separate.
+# All three are named explicitly. A SHORTER list would not do what it looks
+# like: islands past its end fall through to the config-level
+# fitness_weight/novelty_weight (0.7/0.3 here), which is NOT the "balanced"
+# preset (0.3/0.3) — yet island_config_names still LABELS them "balanced"
+# (database.py:220, 301). That mislabelling would be invisible in every run
+# artifact.
 #
-# Island selection remains UCB, so the three islands do NOT receive equal
-# budget (p2B: island 0 took 73.8%). Report per-island iteration counts.
+# use_migration: false makes the islands genuinely independent. With
+# num_context_programs: 1 the hybrid context split resolves to
+# local_count=1, global_count=0 (database.py:606), so no program ever crosses
+# an island boundary through the context builder either — migration was the
+# only remaining channel, and it is now closed.
 #
-# In p2B, multi-objective earned its keep in the interior rather than at the
-# front: q10_score correlated 0.991 with combined_score, but the champion's
-# lineage passed through two steps that lost combined_score while gaining
-# q10_score, one surviving on protected_count in the Pareto island. Watch for
-# the same pattern here.
+# ⚠️ max_islands: 8 raises the CAP on dynamic spawning, but the cap was never
+# what stopped it. p2A and p2B both ran with max_islands: 5 and only 2
+# islands — three free slots throughout — and `would_spawn` was false in all
+# 333 records. The binding constraint is spawn_productivity_threshold: 0.015
+# against a global_productivity that measured 0.41–1.00 in those runs
+# (median 0.62 in p2A, 0.46 in p2B), i.e. ~30x above the threshold.
+#
+# The reason is a scale mismatch, not a stalled search:
+# get_global_productivity() returns total_improvements / total_evaluations
+# (adaptation.py:479), counted only over ARCHIVE-ACCEPTED programs
+# (database.py:489), so it measures "fraction of surviving programs that set
+# a new island best" — a quantity that sits near 0.5, and cannot approach
+# 0.015 while the archive is doing its job. On this config, dynamic spawning
+# will still never fire. Raising spawn_productivity_threshold to ~0.40 is
+# what would make it live; that is deliberately NOT done here, because
+# spawning every spawn_cooldown: 30 iterations up to 8 islands would
+# fragment a 200-iteration budget across islands too young to build a
+# lineage.
+#
+# Paired with configuration D, which differs ONLY in multi-objective mode.
 
 language: python
 diff_based_generation: true
@@ -285,12 +308,8 @@ search:
     fitness_key: combined_score
     higher_is_better:
       combined_score: true
-      q10_score: true
-      fraction_positive: true
     fitness_weight: 0.7
     novelty_weight: 0.3
-    pareto_objectives: [q10_score, fraction_positive]
-    pareto_objectives_weight: 0.4
     island_configs: [quality, balanced, diversity]
     use_ucb_selection: true
     use_paradigm_breakthrough: true
@@ -299,7 +318,7 @@ search:
 
 monitor:
   enabled: true
-  port: 8793
+  port: 8792
   host: "127.0.0.1"
 
 human_feedback_enabled: true

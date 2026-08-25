@@ -1,5 +1,5 @@
-# Mechanism run 4/11, arm p1 — homogeneous q,q,q presets, sharing on
-# Generated from docs/EXPERIMENT_PLAN.md. Base: config_mx_both.yaml
+# Phase 1 (unguided discovery, appending scheme) — Run 4, homogeneous q,q,q presets, sharing on
+# The reference run of config_p1mech_01_reference.yaml with one setting changed.
 # system_message byte-identical to phase1_unguided.txt.
 language: python
 diff_based_generation: true

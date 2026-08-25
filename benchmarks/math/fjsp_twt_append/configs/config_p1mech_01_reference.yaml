@@ -1,5 +1,5 @@
-# Mechanism run 1/11, arm p1 — reference: q,p,d presets, both sharing channels on
-# Generated from docs/EXPERIMENT_PLAN.md. Base: config_mx_both.yaml
+# Phase 1 (unguided discovery, appending scheme) — Run 1, the reference run:
+# q, p and d island presets, with migration and cross-island context both on.
 # system_message byte-identical to phase1_unguided.txt.
 language: python
 diff_based_generation: true

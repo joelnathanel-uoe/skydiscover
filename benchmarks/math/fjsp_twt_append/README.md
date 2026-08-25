@@ -46,8 +46,8 @@ harness.py                       the appending harness
 seeds/                           seed programs a run starts from
 configs/                         run configs; each carries its prompt inline
 evaluator_penalize_failures.py   scoring on generated instances
-evaluator_generalise*.py         scoring over three instance types at once
-evaluator_loose_varied.py        scoring on loose due dates, varied machine speeds
+evaluator_generalise.py          scoring over three instance types at once
+evaluator_generalise_extra.py    the same, on instances generated after the runs
 evaluate_academic.py             scoring on the academic sets
 evaluate_test.py                 scoring on the held-out generated instances
 prompts/                         unused; the configs carry the prompt inline
@@ -64,7 +64,7 @@ comparable. The generator that produced them is in
 uv run skydiscover-run \
     benchmarks/math/fjsp_twt_append/seeds/initial_program_append.py \
     benchmarks/math/fjsp_twt_append/evaluator_penalize_failures.py \
-    --config benchmarks/math/fjsp_twt_append/configs/config_p2_A_2island.yaml \
+    --config benchmarks/math/fjsp_twt_append/configs/config_p2_run1.yaml \
     --search adaevolve --model <model> --iterations 200
 ```
 
