@@ -1,13 +1,13 @@
 """
-Evaluate a program on Karim's real instance sets (Set_1..Set_4, .fjs format,
+Evaluate a program on the academic instance sets (Set_1..Set_4, .fjs format,
 Sobeyko & Mönch 2016 style: n_jobs/n_machines header, then per-job operations
 followed by inline release_time/due_date/weight).
 
 Usage:
-    python evaluate_karim.py <program_path> [--sets Set_1,Set_2,...] [--verbose]
+    python evaluate_academic.py <program_path> [--sets Set_1,Set_2,...] [--verbose]
 
 Mirrors evaluate_test.py (same CS-baseline scoring), but parses instances with
-evaluator.parse_instance (Karim's inline format) instead of parse_generated
+evaluator.parse_instance (the academic instances' inline format) instead of parse_generated
 (the generated-instance DUE_DATES:/WEIGHTS: footer format), and reads from
 instances/Set_1..Set_4 instead of instances/test.
 """
@@ -36,11 +36,11 @@ def load_set_instances(set_names):
     return paths
 
 
-def compute_cs_baselines_karim(entries):
-    """CS baselines for Karim's instances, cached per-set (separate from generated/test caches)."""
+def compute_cs_baselines_academic(entries):
+    """CS baselines for the academic instances, cached per-set (separate from generated/test caches)."""
     from baselines import cs_solve
 
-    cache_path = os.path.join(BENCH, "instances", ".cs_baselines_karim.pkl")
+    cache_path = os.path.join(BENCH, "instances", ".cs_baselines_academic.pkl")
     cached = {}
     if os.path.exists(cache_path):
         with open(cache_path, "rb") as f:
@@ -68,7 +68,7 @@ def _results_cache_path(program_path):
     timed out, crashed) never loses completed instance evaluations -- a
     rerun of the same program resumes instead of restarting from scratch."""
     program_hash = hashlib.sha256(os.path.abspath(program_path).encode()).hexdigest()[:12]
-    return os.path.join(BENCH, "instances", f".karim_results_{program_hash}.json")
+    return os.path.join(BENCH, "instances", f".academic_results_{program_hash}.json")
 
 
 def _load_results_cache(path):
@@ -109,7 +109,7 @@ def main():
         print(f"Resuming: {n_cached}/{len(entries)} instances already evaluated (cached at {results_cache_path})", flush=True)
     print(flush=True)
 
-    cs_baselines = compute_cs_baselines_karim(entries)
+    cs_baselines = compute_cs_baselines_academic(entries)
 
     per_set = {s: [] for s in set_names}
     beats = ties = loses = errors = 0
@@ -167,7 +167,7 @@ def main():
 
     print(flush=True)
     print("=" * 60, flush=True)
-    print(f"KARIM INSTANCE SET RESULTS ({len(entries)} instances, {elapsed:.1f}s this run)", flush=True)
+    print(f"ACADEMIC INSTANCE SET RESULTS ({len(entries)} instances, {elapsed:.1f}s this run)", flush=True)
     print("=" * 60, flush=True)
     for set_name in set_names:
         scores = per_set[set_name]

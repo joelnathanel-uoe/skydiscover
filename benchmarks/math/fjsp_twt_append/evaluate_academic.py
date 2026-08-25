@@ -1,13 +1,13 @@
 """
-Evaluate a Phase 2 (append-only) program on Karim's real instance sets
+Evaluate a Phase 2 (append-only) program on the academic instance sets
 (Set_1..Set_4, .fjs format, Sobeyko & Moench 2016 style).
 
 Usage:
-    python evaluate_karim.py <program_path> [--sets Set_1,Set_2,...] [--verbose] [--workers N]
+    python evaluate_academic.py <program_path> [--sets Set_1,Set_2,...] [--verbose] [--workers N]
 
-Mirrors Phase 1's evaluate_karim.py (same CS-baseline scoring, same per-program
+Mirrors Phase 1's evaluate_academic.py (same CS-baseline scoring, same per-program
 results cache so an interrupted run resumes instead of restarting), but drives
-the append-only harness (choose_next) and reuses Phase 1's Karim CS-baseline
+the append-only harness (choose_next) and reuses Phase 1's academic CS-baseline
 cache directly, since baselines depend only on the instance and the classical
 portfolio, not on which harness scored the program.
 
@@ -27,7 +27,7 @@ from evaluator_penalize_failures import (
 )
 
 ALL_SETS = ["Set_1", "Set_2", "Set_3", "Set_4"]
-KARIM_CACHE_PATH = os.path.join(PHASE1_DIR, "instances", ".cs_baselines_karim.pkl")
+ACADEMIC_CACHE_PATH = os.path.join(PHASE1_DIR, "instances", ".cs_baselines_academic.pkl")
 
 # Phase 2's own results cache directory, kept separate from Phase 1's so the
 # two phases' per-program caches (keyed by program path hash) never collide.
@@ -47,19 +47,19 @@ def load_set_instances(set_names):
     return paths
 
 
-def load_cs_baselines_karim():
-    if not os.path.exists(KARIM_CACHE_PATH):
+def load_cs_baselines_academic():
+    if not os.path.exists(ACADEMIC_CACHE_PATH):
         raise FileNotFoundError(
-            f"No cached CS baselines at {KARIM_CACHE_PATH}. "
-            f"Run Phase 1's evaluate_karim.py once first to build it."
+            f"No cached CS baselines at {ACADEMIC_CACHE_PATH}. "
+            f"Run Phase 1's evaluate_academic.py once first to build it."
         )
-    with open(KARIM_CACHE_PATH, "rb") as f:
+    with open(ACADEMIC_CACHE_PATH, "rb") as f:
         return pickle.load(f)
 
 
 def _results_cache_path(program_path):
     program_hash = hashlib.sha256(os.path.abspath(program_path).encode()).hexdigest()[:12]
-    return os.path.join(RESULTS_DIR, f".karim_results_p2_{program_hash}.json")
+    return os.path.join(RESULTS_DIR, f".academic_results_p2_{program_hash}.json")
 
 
 def _load_results_cache(path):
@@ -112,7 +112,7 @@ def main():
               f"(cached at {results_cache_path})", flush=True)
     print(flush=True)
 
-    cs_baselines = load_cs_baselines_karim()
+    cs_baselines = load_cs_baselines_academic()
 
     per_set = {s: [] for s in set_names}
     beats = ties = loses = errors = 0
@@ -173,7 +173,7 @@ def main():
 
     print(flush=True)
     print("=" * 60, flush=True)
-    print(f"PHASE 2 KARIM INSTANCE SET RESULTS ({len(entries)} instances, {elapsed:.1f}s this run)", flush=True)
+    print(f"PHASE 2 ACADEMIC INSTANCE SET RESULTS ({len(entries)} instances, {elapsed:.1f}s this run)", flush=True)
     print("=" * 60, flush=True)
     for set_name in set_names:
         scores = per_set[set_name]

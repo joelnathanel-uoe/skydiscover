@@ -3,12 +3,12 @@
 Discovery benchmark for the second experimental stage: evolving **appending**
 construction heuristics for the flexible job shop with total weighted tardiness.
 
-Phase 1 lives in `../fjsp_twt/` and is deliberately left untouched, so its runs
+Phase 1 lives in `../fjsp_twt_insertion/` and is deliberately left untouched, so its runs
 stay reproducible. This directory is a sibling, not a replacement.
 
 ## Scope: appending only
 
-Karim scoped Stage 2 to appending schemes, excluding the more general inserting
+The study scopes this stage to appending schemes, excluding the more general inserting
 scheme (too complex for the timeline). The Phase 1 trajectory data independently
 supports that scoping — in run `fjsp_twt_0714_1406`:
 
@@ -77,9 +77,9 @@ behaviourally the same heuristic. Evaluation takes 2.5s against Phase 1's 11.4s.
     seeds/initial_program_append.py   seed program
     prompts/                          unused — configs carry the prompt inline
 
-Instances and CS baselines are shared with Phase 1 (`../fjsp_twt/instances/`,
-`../fjsp_twt/.cs_baselines.pkl`) rather than copied: 100 generated train
-instances, 50 held-out generated test instances, and Karim's four real
+Instances and CS baselines are shared with Phase 1 (`../fjsp_twt_insertion/instances/`,
+`../fjsp_twt_insertion/.cs_baselines.pkl`) rather than copied: 100 generated train
+instances, 50 held-out generated test instances, and the four academic
 benchmark sets. Reusing the cached baselines makes Phase 1 and Phase 2 scores
 comparable by construction, and preserves the held-out status of the test set.
 

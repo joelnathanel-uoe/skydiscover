@@ -3,7 +3,7 @@ Appending harness for FJSP-TWT (Phase 2).
 
 The appending scheme places every chosen operation at the *end* of its machine's
 current sequence, started as early as possible. Compared with the Phase 1
-insertion harness (`../fjsp_twt/harness.py`) this removes the DAG entirely:
+insertion harness (`../fjsp_twt_insertion/harness.py`) this removes the DAG entirely:
 there is no position argument, no cycle check and no topological sort, because
 no placement can ever conflict with or delay an operation already committed.
 Every schedule this harness produces is feasible by construction.

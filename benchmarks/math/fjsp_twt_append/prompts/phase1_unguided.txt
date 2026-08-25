@@ -1,0 +1,100 @@
+You are an expert in combinatorial optimization and scheduling. Your task
+is to design a novel APPENDING CONSTRUCTION HEURISTIC for the Flexible Job
+Shop Scheduling Problem with Total Weighted Tardiness (FJSP-TWT).
+
+--- The problem ---
+
+A set of jobs must be processed on a set of machines. Each job is an
+ordered sequence of operations; each operation can be processed by one or
+more eligible machines, with a processing time that may depend on the
+machine. Each job has a release date, a due date, and a weight. Machines
+process one operation at a time and operations are not interruptible.
+Minimise total weighted tardiness:
+  TWT = sum_j  w_j * max(0, C_j - d_j)
+where w_j is the job weight, d_j its due date, C_j its completion time.
+
+--- The appending scheme ---
+
+A construction heuristic builds a complete schedule step by step,
+scheduling one operation per step. The chosen operation is placed at the
+END of the chosen machine's current sequence and started as early as
+possible. You never choose a position: the harness — a fixed scheduling
+loop that calls your function — always appends the operation you pick and
+starts it as early as possible.
+
+--- What your function must do ---
+
+The available operations are the next unscheduled operations of jobs whose
+preceding operations have all been scheduled. Each available operation o,
+paired with an eligible machine m, forms a candidate with earliest start
+s(o,m) = max(job ready time, machine free time) and earliest completion
+e(o,m) = s(o,m) + p(o,m), p(o,m) being the processing time of operation o
+using machine m.
+
+Your task is to implement choose_next. Each call it receives that set of
+candidates and returns one of them:
+
+    def choose_next(candidates, machine_sequences, machine_free, job_ready,
+                    job_next_op, instance):
+        ...
+        return one_candidate
+
+--- Arguments ---
+
+  candidates        list of Candidate namedtuples, one per (available
+                      operation, eligible machine) pair, in deterministic
+                      order. Never empty. Fields:
+                        c.op       (j, o) — job index, operation index
+                        c.machine  machine id
+                        c.start    earliest start s(o,m)
+                        c.end      earliest completion e(o,m)
+                        c.proc     processing time p(o,m)
+  machine_sequences dict m -> [(op, start, end), ...] already committed on
+                      machine m, in processing order
+  machine_free      dict m -> time machine m becomes free (0 if unused)
+  job_ready         dict j -> time job j becomes ready: the end of its last
+                      committed operation, or its release time if none
+  job_next_op       dict j -> index of j's next unscheduled operation, or
+                      None if j is fully scheduled
+  instance          n_jobs, n_machines, jobs[{release_time, due_date,
+                      weight, operations: [[[machine_id, proc_time], ...],
+                      ...]}]
+
+The only decision you make is WHICH CANDIDATE IS SCHEDULED NEXT. Return
+one of the candidates you were given, unmodified. Anything that does not
+match one of the offered candidates is rejected and the program fails.
+Concretely, this means you cannot invent a start time, pick a machine that
+was not offered for that operation, or schedule an operation whose
+predecessor is still unscheduled — none of those appear among your
+candidates.
+
+--- Scoring ---
+
+We score your function by running it on several benchmark instances and
+taking the median of the following quantity:
+
+  score = (cs_twt - your_twt) / cs_twt
+
+where cs_twt is a strong baseline: for each instance, the best result
+achieved by a range of classical scheduling heuristics (e.g. shortest
+processing time, earliest due date, and apparent tardiness cost rules),
+each evaluated on that instance. A positive score means lower tardiness
+than the baseline; 0 means you tied it; negative means worse. If your
+function errors or exceeds its time budget on any instance, the program
+scores -100.
+
+Your objective is to make this score as high as you can.
+
+--- Constraints ---
+
+choose_next is called once per operation.
+
+No state between calls: each call receives a fresh copy of instance —
+anything written to it is lost. Setting attributes on the function itself
+(e.g. choose_next._cache = ...) is forbidden and invalidates the program.
+Make each decision using only the arguments passed in that call.
+
+Each call has a time budget proportional to the number of candidates at
+that step.
+
+Restrictions: Python standard library + numpy only.
