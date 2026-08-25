@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AdaEvolve Run Comparison</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; background: #f7f7f8; color: #1a1a1a; }
+  header { background: #1a1a2e; color: #fff; padding: 14px 20px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+  header h1 { font-size: 16px; margin: 0; font-weight: 600; }
+  nav { display: flex; gap: 4px; }
+  nav button { background: none; border: none; color: #b8b8c8; padding: 8px 14px; cursor: pointer; font-size: 13px; border-radius: 6px; }
+  nav button.active { background: #33334d; color: #fff; }
+  nav button:hover { color: #fff; }
+  main { padding: 18px 24px; }
+  .tab { display: none; }
+  .tab.active { display: block; }
+  .card { background: #fff; border: 1px solid #e2e2e6; border-radius: 8px; padding: 16px; margin-bottom: 18px; }
+  .card h2 { font-size: 14px; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.03em; color: #555; }
+  .run-picker { display: flex; flex-wrap: wrap; gap: 10px; }
+  .run-picker label { display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 5px 10px; border-radius: 6px; border: 1px solid #ddd; cursor: pointer; }
+  .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  table.config-table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  table.config-table th, table.config-table td { border: 1px solid #e2e2e6; padding: 6px 10px; text-align: left; vertical-align: top; }
+  table.config-table th { background: #f0f0f3; position: sticky; top: 0; }
+  tr.na-row td { color: #999; font-style: italic; background: #fafafa; }
+  .plot { width: 100%; min-height: 320px; }
+  .run-block { margin-bottom: 10px; }
+  .run-block h3 { font-size: 12px; margin: 0 0 6px 0; color: #444; }
+  .badge { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 11px; margin-left: 6px; }
+  .badge.clean { background: #d4f4dd; color: #1a7a3a; }
+  .badge.warn { background: #fde3d0; color: #a15200; }
+  .event-log { max-height: 260px; overflow-y: auto; font-size: 12px; font-family: ui-monospace, monospace; background: #fafafa; border-radius: 6px; padding: 8px; }
+  .event-log div { padding: 2px 0; border-bottom: 1px solid #eee; }
+  .note { font-size: 12px; color: #777; margin-top: 6px; }
+  table.programs-table { border-collapse: collapse; width: 100%; font-size: 12px; margin-bottom: 4px; }
+  table.programs-table th, table.programs-table td { border: 1px solid #e2e2e6; padding: 5px 8px; text-align: left; }
+  table.programs-table th { background: #f0f0f3; cursor: pointer; user-select: none; }
+  table.programs-table tbody tr { cursor: pointer; }
+  table.programs-table tbody tr:hover { background: #f5f7fb; }
+  table.programs-table tbody tr.selected { background: #e6edfb; }
+  table.programs-table tbody tr.no-code { color: #999; font-style: italic; cursor: default; }
+  table.programs-table tbody tr.no-code:hover { background: inherit; }
+  table.programs-table tbody tr.is-best td:first-child { font-weight: 600; }
+  .badge.best { background: #d4e8fd; color: #1a5a9a; }
+  .code-viewer { display: none; margin-top: 8px; max-height: 480px; overflow: auto; background: #1e1e28; color: #d4d4d4; border-radius: 6px; padding: 12px; font-family: ui-monospace, monospace; font-size: 12px; white-space: pre; }
+  .code-viewer.open { display: block; }
+  .filter-bar { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; margin-bottom: 12px; font-size: 12px; }
+  .filter-bar label { margin-right: 6px; white-space: nowrap; }
+  .filter-bar input[type="number"], .filter-bar input[type="text"] { border: 1px solid #ddd; border-radius: 4px; padding: 3px 6px; font-size: 12px; }
+  th.sortable, th[data-sort-key] { cursor: pointer; user-select: none; }
+  td.pin-col, th.pin-col { width: 24px; text-align: center; }
+  .collection-panel { display: flex; flex-wrap: wrap; gap: 12px; }
+  .collection-item { border: 1px solid #e2e2e6; border-radius: 8px; padding: 10px; width: 460px; max-width: 100%; }
+  .collection-item a, .collection-item button { color: #1a5a9a; text-decoration: none; border: none; background: none; cursor: pointer; font-size: 11px; }
+  .collection-item .code-viewer { max-height: 260px; }
+  .island-filter-group { margin-right: 16px; white-space: nowrap; display: inline-block; }
+  .subhead { font-size: 12px; margin: 14px 0 6px 0; color: #555; text-transform: uppercase; letter-spacing: 0.03em; }
+  #collection-actions { margin-bottom: 10px; font-size: 12px; }
+  #collection-actions a, #collection-actions button { color: #1a5a9a; text-decoration: none; border: none; background: none; cursor: pointer; font-size: 12px; }
+  button.pin-batch-btn { font-size: 11px; border: 1px solid #ddd; border-radius: 4px; padding: 2px 8px; cursor: pointer; background: #fff; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #16161d; color: #e4e4e8; }
+    .card { background: #1e1e28; border-color: #33333f; }
+    .card h2 { color: #aaa; }
+    .run-picker label { border-color: #3a3a48; }
+    table.config-table th, table.config-table td { border-color: #33333f; }
+    table.config-table th { background: #26262f; }
+    tr.na-row td { background: #1a1a22; color: #777; }
+    .event-log { background: #1a1a22; }
+    .event-log div { border-color: #2a2a34; }
+    .filter-bar input[type="number"], .filter-bar input[type="text"] { background: #26262f; border-color: #3a3a48; color: #e4e4e8; }
+    .collection-item { border-color: #33333f; }
+    .collection-item a, .collection-item button { color: #7fb3e8; }
+    .subhead { color: #aaa; }
+    #collection-actions a, #collection-actions button { color: #7fb3e8; }
+    button.pin-batch-btn { background: #26262f; border-color: #3a3a48; color: #e4e4e8; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>AdaEvolve Run Comparison</h1>
+  <nav id="tab-nav"></nav>
+</header>
+
+<main>
+  <div class="tab active" id="tab-overview">
+    <div class="card" id="experiment-brief-card" style="display:none">
+      <h2 id="experiment-title"></h2>
+      <div class="note" id="experiment-question"></div>
+      <div class="note" id="experiment-design"></div>
+      <div id="experiment-table"></div>
+      <ul class="note" id="experiment-caveats"></ul>
+    </div>
+    <div class="card">
+      <h2>Runs</h2>
+      <div class="run-picker" id="run-picker"></div>
+    </div>
+    <div class="card">
+      <h2>Run health (iteration outcomes)</h2>
+      <div class="note">Success / LLM-quota error / eval timeout / other eval error, per iteration. A run with a large error segment did not get its full iteration budget of real search.</div>
+      <div class="plot" id="plot-health"></div>
+    </div>
+    <div class="card">
+      <h2>Config comparison</h2>
+      <div class="note">Rows in italics/grey are confirmed not recoverable from any run artifact (only from external notes / config-file history) — shown explicitly rather than omitted.</div>
+      <div id="config-table"></div>
+    </div>
+  </div>
+
+  <div class="tab" id="tab-scores">
+    <div class="card">
+      <h2>Best score over iteration</h2>
+      <div class="note">Each line ends at that run's last productive iteration — runs that died to quota exhaustion are not extended flat to iteration 100. Y-axis excludes each run's very first (seed) point when setting its visible range — the seed score is often far worse than everything after it (e.g. ~-9 vs CS here) and would otherwise compress the actually-interesting differentiation into a thin band. The seed point is still plotted, just off-screen by default; use the plot toolbar's autoscale button to see the full range.</div>
+      <div class="plot" id="plot-scores"></div>
+    </div>
+  </div>
+
+  <div class="tab" id="tab-islands">
+    <div class="card">
+      <h2>Island population over time</h2>
+      <div class="note">Vertical dashed lines mark migration events (ring topology: island i → i+1).</div>
+      <div id="islands-container"></div>
+    </div>
+  </div>
+
+  <div class="tab" id="tab-diversity">
+    <div class="card">
+      <h2>Population-mean code diversity (cross-run overlay)</h2>
+      <div class="note">Mean pairwise CodeDiversity distance across the whole population, per run, at that run's own checkpoints (checkpoint availability differs per run — x-axis is not forced to align).</div>
+      <div class="plot" id="plot-diversity-overlay"></div>
+    </div>
+    <div class="card">
+      <h2>Within-island vs. between-island diversity (per run)</h2>
+      <div id="diversity-detail-container"></div>
+    </div>
+  </div>
+
+  <div class="tab" id="tab-errors">
+    <div class="card">
+      <h2>Iteration-level outcomes (authoritative)</h2>
+      <div class="plot" id="plot-errors-iteration"></div>
+    </div>
+    <div class="card">
+      <h2>Evaluation-level outcomes (finer-grained; includes attempts masked by in-iteration retry)</h2>
+      <div class="plot" id="plot-errors-eval"></div>
+    </div>
+    <div class="card">
+      <h2>Time share: LLM generation vs. evaluation</h2>
+      <div class="plot" id="plot-timing"></div>
+    </div>
+  </div>
+
+  <div class="tab" id="tab-paradigm">
+    <div class="card">
+      <h2>Stagnation / improvement-rate timeline</h2>
+      <div class="plot" id="plot-stagnation"></div>
+    </div>
+    <div class="card">
+      <h2>Paradigm-breakthrough event log</h2>
+      <div id="paradigm-log-container"></div>
+    </div>
+  </div>
+
+  <div class="tab" id="tab-programs">
+    <div class="card">
+      <h2>Collection</h2>
+      <div class="note">Pinned programs persist across filters and run selection — use this to gather one program from each island, or from different runs, and view/download them side by side. Pin individual programs from the table below, or pin a whole pre-migration island batch from the Islands & Migration tab.</div>
+      <div id="collection-actions"></div>
+      <div id="collection-container"></div>
+    </div>
+    <div class="card">
+      <h2>Programs</h2>
+      <div class="note">Every program that survived to at least one checkpoint, across all selected runs (programs rejected/evicted before ever reaching a checkpoint are not recoverable — see the data-availability notes). Click a column header to sort, click a row to view its code, check the pin box to add it to the Collection above.</div>
+      <div class="note">Island numbers are local to each run (different runs can have a different number of islands, and dynamic islands spawn new indices mid-run) — "island 1" in one run is not the same population as "island 1" in another, so the filter below is grouped per run rather than treated as one shared category.</div>
+      <div class="filter-bar">
+        <span>Islands (per run): <span id="island-filter"></span></span>
+        <span><label for="min-score-filter">Min score:</label><input type="number" id="min-score-filter" step="0.01" placeholder="none" style="width:70px"></span>
+        <span><label for="text-filter">Search id/code:</label><input type="text" id="text-filter" placeholder="e.g. numpy" style="width:160px"></span>
+      </div>
+      <div id="programs-container"></div>
+    </div>
+    <div class="card">
+      <h2>Trajectory — by iteration</h2>
+      <div class="note">One row per iteration, in order — the program actually produced that call, regardless of whether it survived to a checkpoint. "best" marks a new global-best score. Rows in grey never reached a checkpoint, so no code is recoverable for them — only their outcome (score/error) is known.</div>
+      <div id="trajectory-container"></div>
+    </div>
+  </div>
+</main>
+
+<script>window.__COMPARISON_DATA__ = /*__COMPARISON_DATA__*/;</script>
+<!--PLOTLY_SCRIPT-->
+<script>
+(function () {
+  const DATA = window.__COMPARISON_DATA__;
+  const RUN_NAMES = Object.keys(DATA.runs);
+  const PALETTE = ["#4c78a8","#f58518","#e45756","#72b7b2","#54a24b","#b279a2","#9c755f","#eeca3b"];
+  const COLOR = {};
+  RUN_NAMES.forEach((r, i) => { COLOR[r] = PALETTE[i % PALETTE.length]; });
+
+  const state = {
+    selected: new Set(RUN_NAMES),
+    collection: new Map(),      // key "run::pid" -> {run, pid}, survives filtering
+    // Island indices are local to each run (different num_islands, dynamic-island
+    // spawns), so "island 1" in run A and run B are unrelated populations -- the
+    // filter is keyed by "run::island", never by island index alone.
+    islandFilter: null,          // Set of active "run::island" keys; null = not yet initialized (= all)
+    knownRunIslands: new Set(),
+    programSort: { key: "score", dir: "desc" },
+  };
+
+  const TABS = [
+    ["overview", "Overview"],
+    ["scores", "Scores"],
+    ["islands", "Islands & Migration"],
+    ["diversity", "Diversity"],
+    ["errors", "Errors & Timing"],
+    ["paradigm", "Paradigm / Stagnation"],
+    ["programs", "Programs"],
+  ];
+
+  function initNav() {
+    const nav = document.getElementById("tab-nav");
+    TABS.forEach(([id, label], i) => {
+      const btn = document.createElement("button");
+      btn.textContent = label;
+      btn.className = i === 0 ? "active" : "";
+      btn.onclick = () => showTab(id, btn);
+      nav.appendChild(btn);
+    });
+  }
+
+  function showTab(id, btnEl) {
+    document.querySelectorAll(".tab").forEach(el => el.classList.remove("active"));
+    document.getElementById("tab-" + id).classList.add("active");
+    document.querySelectorAll("#tab-nav button").forEach(b => b.classList.remove("active"));
+    btnEl.classList.add("active");
+    renderAll();
+  }
+
+  function initRunPicker() {
+    const el = document.getElementById("run-picker");
+    RUN_NAMES.forEach(r => {
+      const run = DATA.runs[r];
+      const iterErrs = run.errors.iteration_level || {};
+      const failed = Object.entries(iterErrs).filter(([k]) => k !== "success").reduce((a, [, v]) => a + v, 0);
+      const cleanBadge = failed === 0
+        ? '<span class="badge clean">clean</span>'
+        : `<span class="badge warn">${failed}/${run.total_iterations} failed</span>`;
+      const itersBadge = `<span class="badge" style="background:#eee;color:#333;" title="Actual completed iterations. The configured target (max_iterations) isn't recoverable from the log for past runs.">${run.total_iterations} iters</span>`;
+      const label = document.createElement("label");
+      label.innerHTML = `<input type="checkbox" checked data-run="${r}"><span class="swatch" style="background:${COLOR[r]}"></span>${r}${itersBadge}${cleanBadge}`;
+      label.querySelector("input").onchange = (e) => {
+        if (e.target.checked) state.selected.add(r); else state.selected.delete(r);
+        renderAll();
+      };
+      el.appendChild(label);
+    });
+  }
+
+  function selectedRuns() { return RUN_NAMES.filter(r => state.selected.has(r)); }
+
+  // global_best_score and per-island best_score are monotone non-decreasing by
+  // definition (they only update on improvement) -- but the climb out of the
+  // seed's score (often wildly worse than everything after it, e.g. ~-9.24 vs
+  // CS here) isn't always a single jump: some runs ramp through several still-
+  // deeply-negative intermediate values first (checked real data -- e.g. run
+  // 1341 goes -9.24 -> -8.41 -> ... over several iterations before reaching
+  // -0.05). So skipping just the initial flat plateau isn't enough. Checked
+  // across all 5 Jul 14 runs: every one -- even the worst performer -- is back
+  // into its real comparison range within the first ~15-20% of iterations.
+  // Since the data is monotone, "skip the first 20% by position" is exactly a
+  // cheap positional percentile floor: robust to the ramp-up shape without
+  // needing to detect it explicitly. No information lost for the max -- the
+  // trace only goes up, so the max is unaffected by this skip. The plotted
+  // line itself is untouched -- the early ramp-up is still drawn, just outside
+  // the default visible range; the toolbar's autoscale/reset button still
+  // shows the full data if wanted.
+  function computeYRange(seriesList, { skipFraction = 0.2, pad = 0.08 } = {}) {
+    let min = Infinity, max = -Infinity;
+    seriesList.forEach(ys => {
+      const valid = ys.filter(y => y !== null && y !== undefined);
+      if (!valid.length) return;
+      valid.forEach(y => { if (y > max) max = y; });
+      const skipN = Math.floor(valid.length * skipFraction);
+      valid.slice(skipN).forEach(y => { if (y < min) min = y; });
+    });
+    if (!isFinite(min) || !isFinite(max)) return undefined;
+    if (min === max) { min -= 0.1; max += 0.1; }
+    const range = max - min;
+    return [min - range * pad, max + range * pad];
+  }
+
+  // ---------------- Overview: run health + config table ----------------
+
+  function renderHealth() {
+    const buckets = ["success", "llm_error", "eval_timeout", "eval_other"];
+    const bucketColor = { success: "#54a24b", llm_error: "#e45756", eval_timeout: "#f58518", eval_other: "#9c755f" };
+    const runs = selectedRuns();
+    const traces = buckets.map(b => ({
+      x: runs,
+      y: runs.map(r => (DATA.runs[r].errors.iteration_level || {})[b] || 0),
+      name: b,
+      type: "bar",
+      marker: { color: bucketColor[b] },
+    }));
+    Plotly.newPlot("plot-health", traces, {
+      barmode: "stack", margin: { t: 10, r: 10, l: 40, b: 60 },
+      yaxis: { title: "iterations" },
+    }, { responsive: true });
+  }
+
+  const CONFIG_ROWS = [
+    ["total_iterations", "Iterations completed"],
+    ["llm_model", "LLM model"],
+    ["evaluator_path", "Evaluator file"],
+    ["num_islands", "Num islands"],
+    ["population_size", "Population size / island"],
+    ["num_context_programs", "Num context programs"],
+    ["use_dynamic_islands", "Dynamic islands"],
+    ["use_paradigm_breakthrough", "Paradigm breakthrough"],
+    ["multiobjective", "Multi-objective"],
+    ["migration_interval", "Migration interval"],
+    ["migration_count", "Migration count"],
+    ["decay", "Decay"],
+    ["intensity_min", "Intensity min"],
+    ["intensity_max", "Intensity max"],
+    ["local_context_program_ratio", "Local context ratio"],
+  ];
+  const NA_ROWS = ["fitness_weight", "novelty_weight", "pareto_weight", "elite_ratio", "llm_temperature", "evaluator_timeout"];
+  const NA_LABELS = {
+    fitness_weight: "Fitness weight (archive)", novelty_weight: "Novelty weight (archive)",
+    pareto_weight: "Pareto weight (archive)", elite_ratio: "Elite ratio (archive)",
+    llm_temperature: "LLM temperature", evaluator_timeout: "Evaluator timeout",
+  };
+
+  function renderConfigTable() {
+    const runs = selectedRuns();
+    let html = '<table class="config-table"><tr><th>Parameter</th>' + runs.map(r => `<th style="color:${COLOR[r]}">${r}</th>`).join("") + '</tr>';
+    CONFIG_ROWS.forEach(([key, label]) => {
+      // total_iterations is the ACTUAL completed count (JSONL line count), not a
+      // configured target -- max_iterations isn't recoverable from the log at all
+      // (checked directly). It lives at the top level of the run bundle, not in
+      // `config`, since it's a runtime outcome rather than a launch parameter.
+      const getVal = (r) => key === "total_iterations" ? DATA.runs[r].total_iterations : DATA.runs[r].config[key];
+      html += `<tr><td>${label}</td>` + runs.map(r => `<td>${getVal(r)}</td>`).join("") + "</tr>";
+    });
+    NA_ROWS.forEach(key => {
+      html += `<tr class="na-row"><td>${NA_LABELS[key]}</td>` + runs.map(() => `<td>N/A — see Notion / config history</td>`).join("") + "</tr>";
+    });
+    html += "</table>";
+    document.getElementById("config-table").innerHTML = html;
+  }
+
+  // ---------------- Scores ----------------
+
+  function renderScores() {
+    const runs = selectedRuns();
+    const traces = runs.map(r => {
+      const run = DATA.runs[r];
+      const cap = run.last_productive_iteration;
+      const pts = run.iterations.filter(it => it.iteration <= cap && it.global_best_score !== null);
+      return {
+        x: pts.map(it => it.iteration),
+        y: pts.map(it => it.global_best_score),
+        name: r, mode: "lines", line: { color: COLOR[r] },
+      };
+    });
+    const yRange = computeYRange(traces.map(t => t.y));
+    Plotly.newPlot("plot-scores", traces, {
+      margin: { t: 10, r: 10, l: 50, b: 40 },
+      xaxis: { title: "iteration" },
+      yaxis: { title: "global best score", range: yRange },
+    }, { responsive: true });
+  }
+
+  // ---------------- Islands & migration ----------------
+
+  // Within-run island comparison: which island actually won, as of that run's last
+  // productive iteration (not the raw last line, which may be a dead quota-tail).
+  function computeIslandSummary(run) {
+    const cap = run.last_productive_iteration;
+    const relevant = run.iterations.filter(it => it.iteration <= cap && it.islands && it.islands.length);
+    const lastRelevant = relevant.length ? relevant[relevant.length - 1] : run.iterations[run.iterations.length - 1];
+    const islandsNow = (lastRelevant && lastRelevant.islands) || [];
+
+    const countByIsland = {};
+    Object.values(run.programs).forEach(p => {
+      (p.islands_seen || []).forEach(i => { countByIsland[i] = (countByIsland[i] || 0) + 1; });
+    });
+
+    return islandsNow
+      .map(isl => ({
+        island_idx: isl.island_idx,
+        config_name: isl.config_name,
+        population_size: isl.population_size,
+        best_score: isl.best_score,
+        programs_recorded: countByIsland[isl.island_idx] || 0,
+      }))
+      .sort((a, b) => (b.best_score ?? -Infinity) - (a.best_score ?? -Infinity));
+  }
+
+  function renderIslandSummaryTable(run) {
+    const rows = computeIslandSummary(run);
+    if (!rows.length) return '<div class="note">no island snapshot available</div>';
+    const top = rows[0].best_score;
+    return `<table class="programs-table">
+      <thead><tr><th>island</th><th>config</th><th>population</th><th>best score (island)</th><th>programs recorded</th></tr></thead>
+      <tbody>
+        ${rows.map(r => `<tr${r.best_score === top ? ' class="is-best"' : ""}>
+          <td>${r.island_idx}</td>
+          <td>${r.config_name || "—"}</td>
+          <td>${r.population_size ?? "—"}</td>
+          <td>${r.best_score !== undefined && r.best_score !== null ? r.best_score.toFixed(4) : "—"}</td>
+          <td>${r.programs_recorded}</td>
+        </tr>`).join("")}
+      </tbody>
+    </table>`;
+  }
+
+  function pinProgram(runName, pid) {
+    if (DATA.runs[runName].programs[pid]) {
+      state.collection.set(rowKey(runName, pid), { run: runName, pid });
+      renderCollection();
+    }
+  }
+
+  // Migration doesn't move a program in place -- it clones it into a NEW id,
+  // with metadata.migrated_from/to on the clone and parent_id pointing at the
+  // pre-migration original (see database.py's _migrate_archives). This table
+  // makes that per-program "moved from island A to B at iteration X" fact
+  // directly visible instead of leaving it buried in program metadata.
+  function renderMigrationLineageTable(run, runName) {
+    const clones = (run.migration_events && run.migration_events.clones) || [];
+    if (!clones.length) return '<div class="note">No migration clones recorded for this run.</div>';
+    const sorted = [...clones].sort((a, b) => (a.migration_iteration ?? 0) - (b.migration_iteration ?? 0));
+    const pinBtn = (pid) => DATA.runs[runName].programs[pid]
+      ? `<button class="pin-one-btn" data-run="${runName}" data-pid="${pid}">pin</button>`
+      : "";
+    let html = `<table class="programs-table"><thead><tr><th>migration iter</th><th>from → to</th><th>original</th><th></th><th>clone</th><th></th><th>score (at migration)</th></tr></thead><tbody>`;
+    sorted.forEach(c => {
+      const candidates = c.migration_iteration_candidates || [];
+      let iterLabel, iterTitle;
+      if (c.migration_iteration === null || c.migration_iteration === undefined) {
+        iterLabel = "—"; iterTitle = "Not derivable for this clone.";
+      } else if (candidates.length > 1) {
+        iterLabel = `${c.migration_iteration}? (ambiguous)`;
+        iterTitle = `Checkpoint gap around this clone's first appearance -- could be any of: ${candidates.join(", ")}. Showing the earliest as a best guess.`;
+      } else if (c.migration_iteration_approx) {
+        iterLabel = `${c.migration_iteration} (approx)`;
+        iterTitle = "Derived from checkpoint presence, not a stored field -- see note above.";
+      } else {
+        iterLabel = String(c.migration_iteration);
+        iterTitle = "Derived from checkpoint presence (confident -- exactly one migration event fits the observed checkpoint window).";
+      }
+      html += `<tr>
+        <td title="${iterTitle}">${iterLabel}</td>
+        <td>${c.from_island} → ${c.to_island}</td>
+        <td>${shortId(c.original_id)}</td>
+        <td>${pinBtn(c.original_id)}</td>
+        <td>${shortId(c.clone_id)}</td>
+        <td>${pinBtn(c.clone_id)}</td>
+        <td>${c.score !== undefined && c.score !== null ? c.score.toFixed(4) : "—"}</td>
+      </tr>`;
+    });
+    html += "</tbody></table>";
+    return html;
+  }
+
+  // Pre-migration batch collection: pin every program that was in a given
+  // island as of the last checkpoint at-or-before a chosen migration event,
+  // so the batch can be exported for offline LLM analysis (see renderCollection).
+  function renderMigrationSnapshotPicker(runName) {
+    const run = DATA.runs[runName];
+    const migIters = (run.migration_events && run.migration_events.iterations) || [];
+    if (!migIters.length) {
+      return '<div class="note">No migration events recorded for this run.</div>';
+    }
+    return `
+      <label for="mig-select-${runName}">Migration event:</label>
+      <select id="mig-select-${runName}">
+        ${migIters.map(it => `<option value="${it}">iteration ${it}</option>`).join("")}
+      </select>
+      <div id="mig-body-${runName}" style="margin-top:8px;"></div>
+    `;
+  }
+
+  function renderMigrationSnapshotBody(runName, migIter) {
+    const run = DATA.runs[runName];
+    const bodyEl = document.getElementById(`mig-body-${runName}`);
+    if (!bodyEl) return;
+    const ckpts = (run.checkpoints_present || []).filter(c => c <= migIter);
+    if (!ckpts.length) {
+      bodyEl.innerHTML = '<div class="note">No checkpoint exists at or before this migration iteration — the pre-migration population isn\'t recoverable for this event.</div>';
+      return;
+    }
+    const useCkpt = Math.max(...ckpts);
+    const islands = (run.islands_by_checkpoint || {})[String(useCkpt)] || [];
+    const drift = migIter - useCkpt;
+    const driftNote = drift === 0
+      ? "checkpoint lands exactly on the migration iteration"
+      : `nearest available checkpoint is ${drift} iteration${drift === 1 ? "" : "s"} before the migration — an approximation, not an exact pre-migration snapshot`;
+    let html = `<div class="note">Using checkpoint ${useCkpt} (${driftNote}).</div>`;
+    html += `<table class="programs-table"><thead><tr><th>island</th><th>programs</th><th></th></tr></thead><tbody>`;
+    islands.forEach((pids, idx) => {
+      html += `<tr><td>${idx}</td><td>${pids.length}</td><td><button class="pin-batch-btn" data-run="${runName}" data-ckpt="${useCkpt}" data-island="${idx}">pin all ${pids.length} to Collection</button></td></tr>`;
+    });
+    html += "</tbody></table>";
+    bodyEl.innerHTML = html;
+
+    bodyEl.querySelectorAll(".pin-batch-btn").forEach(btn => {
+      btn.onclick = () => {
+        const r = btn.dataset.run;
+        const ckpt = btn.dataset.ckpt;
+        const island = parseInt(btn.dataset.island, 10);
+        const pids = ((DATA.runs[r].islands_by_checkpoint || {})[ckpt] || [])[island] || [];
+        pids.forEach(pid => {
+          if (DATA.runs[r].programs[pid]) state.collection.set(rowKey(r, pid), { run: r, pid });
+        });
+        renderCollection();
+      };
+    });
+  }
+
+  function renderIslands() {
+    const container = document.getElementById("islands-container");
+    container.innerHTML = "";
+    selectedRuns().forEach(r => {
+      const run = DATA.runs[r];
+      const numIslands = run.config.num_islands || 0;
+      const div = document.createElement("div");
+      div.className = "run-block";
+      div.innerHTML = `<h3 style="color:${COLOR[r]}">${r}</h3>
+        <div class="note">Within-run comparison — which island actually produced the best result, as of this run's last productive iteration (row highlighted = current leader).</div>
+        ${renderIslandSummaryTable(run)}
+        <div class="note" style="margin-top:8px;">Population size (left) and each island's own best score (right) over the search.</div>
+        <div class="plot" id="plot-islands-${r}"></div>
+        <div class="plot" id="plot-islands-score-${r}" style="margin-top:6px;"></div>
+        <div class="subhead">Migration lineage</div>
+        <div class="note">Every migration clone recorded in this run — which program crossed from which island to which, and its score at that point. Migration doesn't move a program in place: it clones it into a new id, so "original" (stays in its island) and "clone" (the migrated copy) are different program ids sharing a parent link. "Migration iter" is <em>derived</em> from checkpoint presence (the clone's own stored iteration_found field is inherited from the pre-migration original's creation iteration, not the migration event, and would be misleading here) — cross-referenced against this run's known migration iterations; "(approx)" marks a case where that cross-reference wasn't exact.</div>
+        ${renderMigrationLineageTable(run, r)}
+        <div class="subhead">Pre-migration batch export</div>
+        <div class="note">Pin every program from an island as of just before a chosen migration event, to gather and export for LLM analysis via the Collection (Programs tab).</div>
+        ${renderMigrationSnapshotPicker(r)}`;
+      container.appendChild(div);
+
+      div.querySelectorAll(".pin-one-btn").forEach(btn => {
+        btn.onclick = () => pinProgram(btn.dataset.run, btn.dataset.pid);
+      });
+
+      const migSelect = document.getElementById(`mig-select-${r}`);
+      if (migSelect) {
+        migSelect.onchange = () => renderMigrationSnapshotBody(r, parseInt(migSelect.value, 10));
+        renderMigrationSnapshotBody(r, parseInt(migSelect.value, 10));
+      }
+
+      const traces = [];
+      const scoreTraces = [];
+      const islandColors = ["#4c78a8", "#f58518", "#e45756", "#72b7b2", "#54a24b", "#b279a2"];
+      for (let i = 0; i < numIslands; i++) {
+        const c = islandColors[i % islandColors.length];
+        traces.push({
+          x: run.iterations.map(it => it.iteration),
+          y: run.iterations.map(it => (it.islands[i] || {}).population_size),
+          name: `island ${i}`, mode: "lines", line: { color: c },
+        });
+        scoreTraces.push({
+          x: run.iterations.map(it => it.iteration),
+          y: run.iterations.map(it => (it.islands[i] || {}).best_score),
+          name: `island ${i}`, mode: "lines", line: { color: c },
+        });
+      }
+      const shapes = (run.migration_events.iterations || []).map(iter => ({
+        type: "line", x0: iter, x1: iter, y0: 0, y1: 1, yref: "paper",
+        line: { color: "#999", width: 1, dash: "dash" },
+      }));
+      Plotly.newPlot(`plot-islands-${r}`, traces, {
+        margin: { t: 24, r: 10, l: 40, b: 30 }, height: 220,
+        xaxis: { title: "iteration" }, yaxis: { title: "population" }, shapes,
+        title: { text: "Population size", font: { size: 11 } },
+      }, { responsive: true });
+      Plotly.newPlot(`plot-islands-score-${r}`, scoreTraces, {
+        margin: { t: 24, r: 10, l: 40, b: 30 }, height: 220,
+        xaxis: { title: "iteration" },
+        yaxis: { title: "best score", range: computeYRange(scoreTraces.map(t => t.y)) },
+        shapes,
+        title: { text: "Per-island best score", font: { size: 11 } },
+      }, { responsive: true });
+    });
+  }
+
+  // ---------------- Diversity ----------------
+
+  function renderDiversityOverlay() {
+    const runs = selectedRuns();
+    const traces = runs.map(r => {
+      const d = DATA.runs[r].diversity;
+      return { x: d.checkpoints, y: d.population_mean, name: r, mode: "lines+markers", line: { color: COLOR[r] } };
+    });
+    Plotly.newPlot("plot-diversity-overlay", traces, {
+      margin: { t: 10, r: 10, l: 50, b: 40 },
+      xaxis: { title: "checkpoint (iteration)" }, yaxis: { title: "mean pairwise code distance" },
+    }, { responsive: true });
+  }
+
+  function renderDiversityDetail() {
+    const container = document.getElementById("diversity-detail-container");
+    container.innerHTML = "";
+    selectedRuns().forEach(r => {
+      const run = DATA.runs[r];
+      const d = run.diversity;
+      const div = document.createElement("div");
+      div.className = "run-block";
+      div.innerHTML = `<h3 style="color:${COLOR[r]}">${r}</h3><div class="plot" id="plot-div-${r}"></div>`;
+      container.appendChild(div);
+
+      const traces = [];
+      Object.entries(d.within_island).forEach(([island, series]) => {
+        traces.push({ x: d.checkpoints, y: series, name: `within island ${island}`, mode: "lines+markers", line: { dash: "solid" } });
+      });
+      Object.entries(d.between_island).forEach(([pair, series]) => {
+        traces.push({ x: d.checkpoints, y: series, name: `between ${pair}`, mode: "lines+markers", line: { dash: "dot" } });
+      });
+      Plotly.newPlot(`plot-div-${r}`, traces, {
+        margin: { t: 10, r: 10, l: 40, b: 30 }, height: 260,
+        xaxis: { title: "checkpoint" }, yaxis: { title: "distance" },
+      }, { responsive: true });
+    });
+  }
+
+  // ---------------- Errors & timing ----------------
+
+  function renderErrorsIteration() {
+    const buckets = ["success", "llm_error", "eval_timeout", "eval_other"];
+    const bucketColor = { success: "#54a24b", llm_error: "#e45756", eval_timeout: "#f58518", eval_other: "#9c755f" };
+    const runs = selectedRuns();
+    const traces = buckets.map(b => ({
+      x: runs, y: runs.map(r => (DATA.runs[r].errors.iteration_level || {})[b] || 0),
+      name: b, type: "bar", marker: { color: bucketColor[b] },
+    }));
+    Plotly.newPlot("plot-errors-iteration", traces, {
+      barmode: "stack", margin: { t: 10, r: 10, l: 40, b: 60 }, yaxis: { title: "iterations" },
+    }, { responsive: true });
+  }
+
+  function renderErrorsEvaluation() {
+    const buckets = ["success", "timeout", "code_error"];
+    const bucketColor = { success: "#54a24b", timeout: "#f58518", code_error: "#e45756" };
+    const runs = selectedRuns();
+    const traces = buckets.map(b => ({
+      x: runs, y: runs.map(r => (DATA.runs[r].errors.evaluation_level || {})[b] || 0),
+      name: b, type: "bar", marker: { color: bucketColor[b] },
+    }));
+    Plotly.newPlot("plot-errors-eval", traces, {
+      barmode: "stack", margin: { t: 10, r: 10, l: 40, b: 60 }, yaxis: { title: "evaluation attempts" },
+    }, { responsive: true });
+  }
+
+  function renderTiming() {
+    const runs = selectedRuns();
+    const llm = runs.map(r => DATA.runs[r].iterations.reduce((a, it) => a + (it.iteration_result.llm_generation_time_seconds || 0), 0));
+    const evalT = runs.map(r => DATA.runs[r].iterations.reduce((a, it) => a + (it.iteration_result.eval_time_seconds || 0), 0));
+    const traces = [
+      { x: runs, y: llm, name: "LLM generation time (s)", type: "bar", marker: { color: "#4c78a8" } },
+      { x: runs, y: evalT, name: "Evaluation time (s)", type: "bar", marker: { color: "#72b7b2" } },
+    ];
+    Plotly.newPlot("plot-timing", traces, {
+      barmode: "group", margin: { t: 10, r: 10, l: 60, b: 60 }, yaxis: { title: "seconds (total)" },
+    }, { responsive: true });
+  }
+
+  // ---------------- Paradigm / stagnation ----------------
+
+  function renderStagnation() {
+    const runs = selectedRuns();
+    const traces = runs.map(r => {
+      const run = DATA.runs[r];
+      const cap = run.last_productive_iteration;
+      const pts = run.iterations.filter(it => it.iteration <= cap);
+      return {
+        x: pts.map(it => it.iteration), y: pts.map(it => it.paradigm.improvement_rate),
+        name: r, mode: "lines", line: { color: COLOR[r] },
+      };
+    });
+    Plotly.newPlot("plot-stagnation", traces, {
+      margin: { t: 10, r: 10, l: 50, b: 40 },
+      xaxis: { title: "iteration" }, yaxis: { title: "improvement rate" },
+    }, { responsive: true });
+  }
+
+  function renderParadigmLog() {
+    const container = document.getElementById("paradigm-log-container");
+    container.innerHTML = "";
+    selectedRuns().forEach(r => {
+      const run = DATA.runs[r];
+      const interesting = run.paradigm_events.filter(e =>
+        ["stagnation_detected", "paradigms_generated", "paradigm_outcome"].includes(e.type));
+      const div = document.createElement("div");
+      div.className = "run-block";
+      const lines = interesting.map(e => {
+        if (e.type === "stagnation_detected") return `iter ${e.iteration}: stagnation detected`;
+        if (e.type === "paradigms_generated") return `iter ${e.iteration}: generated ${e.count} new paradigms`;
+        if (e.type === "paradigm_outcome") return `iter ${e.iteration}: [${e.outcome}] ${e.idea} (uses: ${e.uses})`;
+        return "";
+      });
+      div.innerHTML = `<h3 style="color:${COLOR[r]}">${r}</h3><div class="event-log">${lines.map(l => `<div>${l}</div>`).join("")}</div>`;
+      container.appendChild(div);
+    });
+  }
+
+  // ---------------- Programs (unified, filterable, sortable, pinnable) ----------------
+
+  function shortId(id) { return id ? id.slice(0, 8) : "—"; }
+
+  function islandLabel(p) {
+    const seen = p.islands_seen || [];
+    if (seen.length > 1) return seen.join("→");
+    if (seen.length === 1) return String(seen[0]);
+    if (p.last_island !== null && p.last_island !== undefined) return String(p.last_island);
+    return "—";
+  }
+
+  function rowKey(run, pid) { return run + "::" + pid; }
+
+  // A migration clone's own `iteration_found` is inherited from the pre-
+  // migration original (see the Migration lineage note) -- misleading if
+  // shown as-is anywhere. This maps clone_id -> the properly-derived
+  // migration info, computed once per run, so any "Iter found" display can
+  // check whether the program it's about to show is actually a clone and
+  // label it correctly instead of silently showing the wrong number.
+  const _cloneIterCache = new Map(); // run -> Map(clone_id -> clone record)
+  function cloneIterationInfo(runName, pid) {
+    if (!_cloneIterCache.has(runName)) {
+      const m = new Map();
+      ((DATA.runs[runName].migration_events || {}).clones || []).forEach(c => m.set(c.clone_id, c));
+      _cloneIterCache.set(runName, m);
+    }
+    return _cloneIterCache.get(runName).get(pid) || null;
+  }
+
+  function displayIterFound(runName, pid, p) {
+    const clone = cloneIterationInfo(runName, pid);
+    if (!clone) return String(p.iteration_found);
+    const ambiguous = (clone.migration_iteration_candidates || []).length > 1;
+    const label = clone.migration_iteration === null || clone.migration_iteration === undefined
+      ? "?"
+      : `${clone.migration_iteration}${ambiguous ? "?" : ""}`;
+    return `${label} [migrated]`;
+  }
+
+  function iterFoundTitle(runName, pid, p) {
+    const clone = cloneIterationInfo(runName, pid);
+    if (!clone) return "";
+    return `This program was created by migration (island ${clone.from_island}→${clone.to_island}), not by normal mutation. ` +
+      `Its stored iteration_found (${p.iteration_found}) is inherited from the pre-migration original and does NOT mean this -- ` +
+      `see the Islands & Migration tab's Migration lineage table for the derived migration iteration.`;
+  }
+
+  // Full source is only present if the bundle was built without --code-preview-only
+  // (full code is the default as of 2026-07-20). If a build predates that, or was
+  // built with the flag, fall back to the 500-char preview but say so loudly rather
+  // than silently handing back truncated code.
+  function programCode(p) {
+    if (p.solution) return p.solution;
+    if (p.code_preview) {
+      return p.code_preview +
+        "\n\n# ... TRUNCATED: this build only stored a 500-char preview per program (--code-preview-only).\n" +
+        "# Rebuild without that flag (full code is the default) to get complete source.";
+    }
+    return "(no code available for this program)";
+  }
+
+  function allProgramEntries() {
+    const out = [];
+    selectedRuns().forEach(r => {
+      const run = DATA.runs[r];
+      Object.entries(run.programs).forEach(([pid, p]) => {
+        out.push({
+          run: r, pid,
+          score: (p.metrics || {}).combined_score,
+          generation: p.generation,
+          iteration_found: p.iteration_found,
+          parent_id: p.parent_id,
+          code_length: p.code_length,
+          islands_seen: p.islands_seen || [],
+          last_island: p.last_island,
+          inspiration_ids: p.other_context_ids || [],
+          inspiration_count: (p.other_context_ids || []).length,
+        });
+      });
+    });
+    return out;
+  }
+
+  // Islands present in a run, per the run's own iteration snapshots (authoritative --
+  // includes dynamically-spawned islands even if nothing from them survived to a
+  // checkpoint, unlike deriving purely from programs.islands_seen).
+  function runIslandIndices(runName) {
+    const set = new Set();
+    DATA.runs[runName].iterations.forEach(it =>
+      it.islands.forEach(isl => {
+        if (isl.island_idx !== undefined && isl.island_idx !== null) set.add(isl.island_idx);
+      })
+    );
+    return Array.from(set).sort((a, b) => a - b);
+  }
+
+  function renderIslandFilter() {
+    const runs = selectedRuns();
+    const byRun = {};
+    runs.forEach(r => { byRun[r] = runIslandIndices(r); });
+
+    if (state.islandFilter === null) state.islandFilter = new Set();
+    const currentKeys = new Set();
+    runs.forEach(r => byRun[r].forEach(i => {
+      const key = r + "::" + i;
+      currentKeys.add(key);
+      if (!state.knownRunIslands.has(key)) state.islandFilter.add(key); // default: newly-seen run/island combos start checked
+    }));
+    state.knownRunIslands = currentKeys;
+
+    const container = document.getElementById("island-filter");
+    if (!runs.some(r => byRun[r].length)) {
+      container.innerHTML = '<span class="note" style="display:inline">no island data for selected runs</span>';
+      return;
+    }
+    container.innerHTML = runs.filter(r => byRun[r].length).map(r => {
+      const chips = byRun[r].map(i => {
+        const key = r + "::" + i;
+        return `<label><input type="checkbox" data-key="${key}"${state.islandFilter.has(key) ? " checked" : ""}> ${i}</label>`;
+      }).join(" ");
+      return `<span class="island-filter-group"><span style="color:${COLOR[r]}; font-weight:600;">${r}:</span> ${chips}</span>`;
+    }).join(" ");
+    container.querySelectorAll("input").forEach(cb => {
+      cb.onchange = () => {
+        const key = cb.dataset.key;
+        if (cb.checked) state.islandFilter.add(key); else state.islandFilter.delete(key);
+        renderProgramsTable();
+      };
+    });
+  }
+
+  function filteredSortedEntries() {
+    let entries = allProgramEntries();
+
+    if (state.islandFilter && state.islandFilter.size < state.knownRunIslands.size) {
+      entries = entries.filter(e =>
+        e.islands_seen.length === 0 || e.islands_seen.some(i => state.islandFilter.has(e.run + "::" + i))
+      );
+    }
+
+    const minScoreEl = document.getElementById("min-score-filter");
+    const minScore = minScoreEl && minScoreEl.value !== "" ? parseFloat(minScoreEl.value) : null;
+    if (minScore !== null && !Number.isNaN(minScore)) {
+      entries = entries.filter(e => e.score !== undefined && e.score !== null && e.score >= minScore);
+    }
+
+    const textEl = document.getElementById("text-filter");
+    const text = textEl ? textEl.value.trim().toLowerCase() : "";
+    if (text) {
+      entries = entries.filter(e => {
+        const p = DATA.runs[e.run].programs[e.pid];
+        return e.pid.toLowerCase().includes(text) || (p.code_preview || "").toLowerCase().includes(text);
+      });
+    }
+
+    const { key, dir } = state.programSort;
+    const mult = dir === "asc" ? 1 : -1;
+    entries.sort((a, b) => {
+      let av = key === "island" ? (a.last_island ?? -Infinity) : a[key];
+      let bv = key === "island" ? (b.last_island ?? -Infinity) : b[key];
+      if (av === undefined || av === null) av = -Infinity;
+      if (bv === undefined || bv === null) bv = -Infinity;
+      if (typeof av === "string" || typeof bv === "string") {
+        av = String(av).toLowerCase(); bv = String(bv).toLowerCase();
+      }
+      if (av < bv) return -1 * mult;
+      if (av > bv) return 1 * mult;
+      return 0;
+    });
+    return entries;
+  }
+
+  function renderProgramsTable() {
+    renderIslandFilter();
+    const entries = filteredSortedEntries();
+    const container = document.getElementById("programs-container");
+    const cols = [
+      ["run", "Run"], ["island", "Island"], ["pid", "ID"], ["score", "Score"],
+      ["generation", "Gen"], ["iteration_found", "Iter found"], ["parent_id", "Parent"],
+      ["inspiration_count", "Insp."], ["code_length", "Code len"],
+    ];
+    const arrow = key => state.programSort.key === key ? (state.programSort.dir === "asc" ? " ▲" : " ▼") : "";
+
+    let html = `<div class="note">${entries.length} program${entries.length === 1 ? "" : "s"} shown. "Insp." = inspiration programs (other context shown to the LLM alongside the parent) — hover for their ids. Rows marked "[migrated]" in Iter found are migration clones -- see the Islands & Migration tab's Migration lineage table for detail, hover the cell for why.</div>` +
+      `<table class="programs-table" id="unified-programs-table"><thead><tr><th class="pin-col"></th>` +
+      cols.map(([key, label]) => `<th data-sort-key="${key}">${label}${arrow(key)}</th>`).join("") +
+      `</tr></thead><tbody>`;
+
+    entries.forEach(e => {
+      const p = DATA.runs[e.run].programs[e.pid];
+      const pinned = state.collection.has(rowKey(e.run, e.pid));
+      const inspTitle = e.inspiration_ids.length ? e.inspiration_ids.map(shortId).join(", ") : "none recorded";
+      html += `<tr data-run="${e.run}" data-pid="${e.pid}">
+        <td class="pin-col"><input type="checkbox" class="pin-checkbox" ${pinned ? "checked" : ""}></td>
+        <td style="color:${COLOR[e.run]}">${e.run}</td>
+        <td>${islandLabel(p)}</td>
+        <td>${shortId(e.pid)}</td>
+        <td>${e.score !== undefined && e.score !== null ? e.score.toFixed(4) : "—"}</td>
+        <td>${e.generation}</td>
+        <td title="${iterFoundTitle(e.run, e.pid, p)}">${displayIterFound(e.run, e.pid, p)}</td>
+        <td>${shortId(e.parent_id)}</td>
+        <td title="${inspTitle}">${e.inspiration_count}</td>
+        <td>${e.code_length}</td>
+      </tr>`;
+    });
+    html += `</tbody></table><div class="code-viewer" id="unified-code-viewer"></div>`;
+    container.innerHTML = html;
+
+    container.querySelectorAll("th[data-sort-key]").forEach(th => {
+      th.onclick = () => {
+        const key = th.dataset.sortKey;
+        if (state.programSort.key === key) state.programSort.dir = state.programSort.dir === "asc" ? "desc" : "asc";
+        else state.programSort = { key, dir: key === "score" ? "desc" : "asc" };
+        renderProgramsTable();
+      };
+    });
+
+    container.querySelectorAll(".pin-checkbox").forEach(cb => {
+      cb.addEventListener("click", ev => {
+        ev.stopPropagation();
+        const row = cb.closest("tr");
+        const key = rowKey(row.dataset.run, row.dataset.pid);
+        if (cb.checked) state.collection.set(key, { run: row.dataset.run, pid: row.dataset.pid });
+        else state.collection.delete(key);
+        renderCollection();
+      });
+    });
+
+    const viewer = document.getElementById("unified-code-viewer");
+    container.querySelectorAll("#unified-programs-table tbody tr").forEach(row => {
+      row.addEventListener("click", () => {
+        const already = row.classList.contains("selected");
+        container.querySelectorAll("#unified-programs-table tbody tr").forEach(r2 => r2.classList.remove("selected"));
+        if (already) { viewer.classList.remove("open"); viewer.textContent = ""; return; }
+        row.classList.add("selected");
+        const p = DATA.runs[row.dataset.run].programs[row.dataset.pid];
+        viewer.textContent = programCode(p);
+        viewer.classList.add("open");
+      });
+    });
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+  }
+
+  function buildBatchExportText() {
+    const items = Array.from(state.collection.values());
+    const header = [
+      `# Program batch export -- ${items.length} programs`,
+      `# Generated: ${new Date().toISOString()}`,
+      "#",
+      "# Suggested use: paste this into an LLM (e.g. Claude) with a prompt such as:",
+      '# "Analyze the structural patterns, paradigms, and notable differences across',
+      '#  these heuristic programs, using the run/island/score metadata below each one."',
+      "",
+    ].join("\n");
+    const blocks = items.map(({ run, pid }) => {
+      const p = DATA.runs[run].programs[pid];
+      const score = (p.metrics || {}).combined_score;
+      return [
+        "=".repeat(80),
+        `Run: ${run} | Island: ${islandLabel(p)} | Program: ${pid} | Score: ${score !== undefined && score !== null ? score.toFixed(4) : "—"} | Gen: ${p.generation} | Iter found: ${displayIterFound(run, pid, p)}`,
+        "=".repeat(80),
+        programCode(p),
+        "",
+      ].join("\n");
+    });
+    return header + "\n" + blocks.join("\n");
+  }
+
+  function renderCollectionActions() {
+    const el = document.getElementById("collection-actions");
+    if (state.collection.size === 0) { el.innerHTML = ""; return; }
+    const filename = `program_batch_${state.collection.size}.txt`;
+    el.innerHTML = `
+      <a href="data:text/plain;charset=utf-8,${encodeURIComponent(buildBatchExportText())}" download="${filename}">download batch (${state.collection.size} programs) as .txt, ready to paste into an LLM</a>
+      &nbsp;·&nbsp;
+      <button id="clear-collection-btn">clear collection</button>
+    `;
+    document.getElementById("clear-collection-btn").onclick = () => {
+      state.collection.clear();
+      renderCollection();
+      if (document.getElementById("unified-programs-table")) renderProgramsTable();
+    };
+  }
+
+  function renderCollection() {
+    renderCollectionActions();
+    const container = document.getElementById("collection-container");
+    if (state.collection.size === 0) {
+      container.innerHTML = '<div class="note">Nothing pinned yet — check the pin box on any row in the Programs table below.</div>';
+      return;
+    }
+    const wrap = document.createElement("div");
+    wrap.className = "collection-panel";
+    state.collection.forEach(({ run, pid }, key) => {
+      const p = DATA.runs[run].programs[pid];
+      const score = (p.metrics || {}).combined_score;
+      const code = programCode(p);
+      const filename = `${run}_${pid.slice(0, 8)}.py`;
+      const item = document.createElement("div");
+      item.className = "collection-item";
+      item.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <div>
+            <strong style="color:${COLOR[run]}">${run}</strong>
+            <span class="badge" style="background:#eee;color:#333;">island ${islandLabel(p)}</span>
+            <span class="note" style="display:inline">score ${score !== undefined && score !== null ? score.toFixed(4) : "—"}</span>
+          </div>
+          <div>
+            <a href="data:text/x-python;charset=utf-8,${encodeURIComponent(code)}" download="${filename}">download .py</a>
+            &nbsp;·&nbsp;
+            <button class="unpin-btn" data-key="${key}">unpin</button>
+          </div>
+        </div>
+        <div class="code-viewer open">${escapeHtml(code)}</div>
+      `;
+      wrap.appendChild(item);
+    });
+    container.innerHTML = "";
+    container.appendChild(wrap);
+    container.querySelectorAll(".unpin-btn").forEach(btn => {
+      btn.onclick = () => {
+        state.collection.delete(btn.dataset.key);
+        renderCollection();
+        renderProgramsTable();
+      };
+    });
+  }
+
+  function initProgramsFilters() {
+    document.getElementById("min-score-filter").addEventListener("input", renderProgramsTable);
+    document.getElementById("text-filter").addEventListener("input", renderProgramsTable);
+  }
+
+  function renderTrajectory() {
+    const container = document.getElementById("trajectory-container");
+    container.innerHTML = "";
+    selectedRuns().forEach(r => {
+      const run = DATA.runs[r];
+      let runningBest = -Infinity;
+      const rows = run.iterations.map(it => {
+        const ir = it.iteration_result;
+        const isBest = ir.success && ir.child_score !== null && ir.child_score !== undefined && ir.child_score > runningBest + 1e-9;
+        if (isBest) runningBest = ir.child_score;
+        return { iteration: it.iteration, ...ir, isBest };
+      });
+
+      const div = document.createElement("div");
+      div.className = "run-block";
+      const tableId = `trajectory-table-${r}`;
+      const viewerId = `trajectory-viewer-${r}`;
+      div.innerHTML = `
+        <h3 style="color:${COLOR[r]}">${r}</h3>
+        <table class="programs-table" id="${tableId}">
+          <thead><tr><th>iter</th><th>program</th><th>island</th><th>score</th><th>parent</th><th>outcome</th></tr></thead>
+          <tbody>
+            ${rows.map(row => {
+              const childProgram = row.child_program_id ? run.programs[row.child_program_id] : null;
+              const hasCode = childProgram && childProgram.solution;
+              const cls = [row.isBest ? "is-best" : "", !hasCode ? "no-code" : ""].filter(Boolean).join(" ");
+              const outcome = row.success
+                ? (row.isBest ? '<span class="badge best">best</span>' : "ok")
+                : `<span title="${(row.error || "").replace(/"/g, "&quot;")}">${row.bucket}</span>`;
+              return `
+                <tr data-pid="${row.child_program_id || ""}" class="${cls}">
+                  <td>${row.iteration}</td>
+                  <td>${shortId(row.child_program_id)}</td>
+                  <td>${childProgram ? islandLabel(childProgram) : "—"}</td>
+                  <td>${row.child_score !== undefined && row.child_score !== null ? row.child_score.toFixed(4) : "—"}</td>
+                  <td>${shortId(row.parent_id)}</td>
+                  <td>${outcome}</td>
+                </tr>`;
+            }).join("")}
+          </tbody>
+        </table>
+        <div class="code-viewer" id="${viewerId}"></div>
+      `;
+      container.appendChild(div);
+
+      const viewer = div.querySelector(`#${viewerId}`);
+      div.querySelectorAll(`#${tableId} tbody tr:not(.no-code)`).forEach(row => {
+        row.addEventListener("click", () => {
+          const pid = row.dataset.pid;
+          const already = row.classList.contains("selected");
+          div.querySelectorAll(`#${tableId} tbody tr`).forEach(r2 => r2.classList.remove("selected"));
+          if (already) {
+            viewer.classList.remove("open");
+            viewer.textContent = "";
+            return;
+          }
+          row.classList.add("selected");
+          const p = run.programs[pid];
+          viewer.textContent = programCode(p);
+          viewer.classList.add("open");
+        });
+      });
+    });
+  }
+
+  // ---------------- Overview: experiment brief ----------------
+
+  function bestUpTo(runName, maxIter) {
+    const iters = (DATA.runs[runName] || {}).iterations || [];
+    let best = null;
+    for (const it of iters) {
+      if (maxIter != null && it.iteration > maxIter) break;
+      if (it.global_best_score == null) continue;
+      if (best == null || it.global_best_score > best) best = it.global_best_score;
+    }
+    return best;
+  }
+
+  function renderExperimentBrief() {
+    const card = document.getElementById("experiment-brief-card");
+    const exp = DATA.experiment;
+    if (!exp) { card.style.display = "none"; return; }
+    card.style.display = "";
+    document.getElementById("experiment-title").textContent = exp.title;
+    document.getElementById("experiment-question").textContent = "Question: " + exp.question;
+    document.getElementById("experiment-design").textContent = "Design: " + exp.design;
+
+    const names = exp.runs.map(r => r.name).filter(n => DATA.runs[n]);
+    const budgetN = names.length
+      ? Math.min(...names.map(n => DATA.runs[n].total_iterations))
+      : null;
+
+    let html = '<table class="config-table"><tr><th>Run</th><th>What differs</th><th>Iters</th>'
+      + `<th>Best</th><th>Best ≤${budgetN != null ? budgetN : "?"}</th></tr>`;
+    exp.runs.forEach(r => {
+      const bundle = DATA.runs[r.name];
+      if (!bundle) {
+        html += `<tr><td colspan="5"><em>${r.name} — not included in this build</em></td></tr>`;
+        return;
+      }
+      const isLive = (DATA.live_runs || []).includes(r.name);
+      const liveBadge = isLive ? ' <span style="color:#e45756">● live, snapshot at build time</span>' : "";
+      const noteBadge = r.note ? ` <em>(${r.note})</em>` : "";
+      const best = bestUpTo(r.name, null);
+      const bestAtN = bestUpTo(r.name, budgetN);
+      html += `<tr><td style="color:${COLOR[r.name] || "inherit"}">${r.name}${liveBadge}</td>`
+        + `<td>${r.differs}${noteBadge}</td>`
+        + `<td>${bundle.total_iterations}</td>`
+        + `<td>${best != null ? best.toFixed(4) : "—"}</td>`
+        + `<td>${bestAtN != null ? bestAtN.toFixed(4) : "—"}</td></tr>`;
+    });
+    html += "</table>";
+    document.getElementById("experiment-table").innerHTML = html;
+
+    document.getElementById("experiment-caveats").innerHTML =
+      (exp.caveats || []).map(c => `<li>${c}</li>`).join("");
+  }
+
+  // ---------------- Render dispatch ----------------
+
+  function renderAll() {
+    const activeTab = document.querySelector(".tab.active").id;
+    if (activeTab === "tab-overview") { renderExperimentBrief(); renderHealth(); renderConfigTable(); }
+    else if (activeTab === "tab-scores") { renderScores(); }
+    else if (activeTab === "tab-islands") { renderIslands(); }
+    else if (activeTab === "tab-diversity") { renderDiversityOverlay(); renderDiversityDetail(); }
+    else if (activeTab === "tab-errors") { renderErrorsIteration(); renderErrorsEvaluation(); renderTiming(); }
+    else if (activeTab === "tab-paradigm") { renderStagnation(); renderParadigmLog(); }
+    else if (activeTab === "tab-programs") { renderCollection(); renderProgramsTable(); renderTrajectory(); }
+  }
+
+  initNav();
+  initRunPicker();
+  initProgramsFilters();
+  renderAll();
+})();
+</script>
+</body>
+</html>

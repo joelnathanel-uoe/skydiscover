@@ -1,0 +1,77 @@
+{
+  "_comment": [
+    "Experiment definitions for build_comparison.py --experiment NAME.",
+    "Prose only: titles, questions, design notes, per-run 'what differs' and caveats.",
+    "No scores or iteration counts live here -- every number in the Experiment brief",
+    "is computed from the run bundles at build time so it cannot go stale."
+  ],
+
+  "exp1_sharing_ladder": {
+    "title": "Experiment 1 — Cross-island sharing ladder",
+    "question": "Does cross-island sharing help, and do both channels — migration and cross-island context — contribute?",
+    "design": "A single-factor ladder off the reference cell: remove migration, then additionally restrict each island's context to its own programs. Configs are byte-identical apart from the one knob under test. The ladder is repeated in the guided (p2) arm to test whether a mechanism effect survives a change of prompt.",
+    "runs": [
+      {"name": "p1mech01_reference", "differs": "reference — migration ON, cross-island context ON"},
+      {"name": "p1mech02_nomig", "differs": "migration OFF"},
+      {"name": "p1mech03_isolated", "differs": "migration OFF + context restricted to the local island"},
+      {"name": "p2mech01_reference", "differs": "guided prompt, otherwise the reference", "note": "replication"},
+      {"name": "p2mech02_nomig", "differs": "guided prompt + migration OFF", "note": "replication"},
+      {"name": "p2mech03_isolated", "differs": "guided prompt + migration OFF + local-only context", "note": "replication"}
+    ],
+    "caveats": []
+  },
+
+  "exp2_paradigm": {
+    "title": "Experiment 2 — Paradigm injection: does it help, breadth or depth?",
+    "question": "Does injecting generated paradigm ideas on stagnation beat the plain reference, and is it better to push one idea across every island or to spread several ideas thinly?",
+    "design": "Every cell shares the reference configuration and differs only in the shape of the paradigm generator: 3 ideas × 2 islands, 1 idea × 6 islands, or 6 ideas × 1 island. The clean rerun (05_r2) is used here; the outage-contaminated original is in Experiment 5.",
+    "runs": [
+      {"name": "p1mech01_reference", "differs": "reference — paradigm injection OFF"},
+      {"name": "p1mech05_paradigm_r2", "differs": "paradigm ON — 3 ideas × 2 islands, threshold 0.12"},
+      {"name": "p1mech07_paradigm_1x6", "differs": "paradigm ON — 1 idea × 6 islands (breadth)"},
+      {"name": "p1mech08_paradigm_6x1", "differs": "paradigm ON — 6 ideas × 1 island (depth)"}
+    ],
+    "caveats": []
+  },
+
+  "exp3_homogeneity": {
+    "title": "Experiment 3 — Must islands differ from each other, or only communicate?",
+    "question": "The sharing ladder tests whether islands talk to each other. This tests whether they need to be configured differently at all.",
+    "design": "Heterogeneous vs homogeneous archive presets (quality/pareto/diversity vs quality × 3), crossed with sharing on vs off. The reading under test: homogeneous presets hurt only when migration is on, because migration clones rather than moves, so identical archives plus a ring collapse into a monoculture.",
+    "runs": [
+      {"name": "p1mech01_reference", "differs": "reference — presets quality/pareto/diversity, sharing ON"},
+      {"name": "p1mech04_homogeneous_r2", "differs": "presets quality × 3, sharing ON"},
+      {"name": "p1mech03_isolated", "differs": "presets quality/pareto/diversity, sharing OFF"},
+      {"name": "p1mech11_homogeneous_isolated", "differs": "presets quality × 3, sharing OFF", "note": "outage-contaminated, no clean rerun exists"}
+    ],
+    "caveats": []
+  },
+
+  "exp4_prompt_x_seed": {
+    "title": "Experiment 4 — Prompt × seed",
+    "question": "Does the guided prompt's advantage depend on which seed program the search starts from?",
+    "design": "A full 2×2: unguided vs guided prompt, crossed with the append seed and the neutral seed, all four on the reference mechanism configuration. The p1 and p2 configs were verified to differ in the prompt key only, and the prompt actually sent was confirmed from the logged per-call traffic rather than from the config file.",
+    "runs": [
+      {"name": "p1mech01_reference", "differs": "unguided prompt, append seed"},
+      {"name": "p1mech01_neutralseed", "differs": "unguided prompt, neutral seed"},
+      {"name": "p2mech01_reference", "differs": "guided prompt, append seed"},
+      {"name": "p2mech01_neutralseed", "differs": "guided prompt, neutral seed"}
+    ],
+    "caveats": []
+  },
+
+  "exp5_run_health": {
+    "title": "Experiment 5 (methods) — Outage contamination and what the reruns changed",
+    "question": "Which runs did the LLM outages corrupt, and did rerunning them change the conclusion?",
+    "design": "Each contaminated run is paired with its clean rerun. During an outage the claude CLI exited before any API call, so an iteration produced nothing — but end_iteration() still ran, and migration fires on iteration % interval, so the mechanism clocks advanced on empty iterations. That is why these cells could not be repaired by resuming from a checkpoint: the treatment itself was mis-clocked, not merely interrupted.",
+    "runs": [
+      {"name": "p1mech04_homogeneous", "differs": "contaminated — 47 abandoned iterations, 486 CLI errors; migration fired every ~18 real steps instead of 30"},
+      {"name": "p1mech04_homogeneous_r2", "differs": "clean rerun of 04"},
+      {"name": "p1mech05_paradigm", "differs": "contaminated — 79 abandoned iterations; only 2 paradigm batches ever fired, on a stagnation signal manufactured by dead LLM calls"},
+      {"name": "p1mech05_paradigm_r2", "differs": "clean rerun of 05"},
+      {"name": "p1mech11_homogeneous_isolated", "differs": "contaminated — 82 abandoned iterations; rerun dropped from the study"},
+      {"name": "p1mech06_paradigm_t025", "differs": "abandoned at 37 iterations on quota exhaustion; unusable"}
+    ],
+    "caveats": []
+  }
+}

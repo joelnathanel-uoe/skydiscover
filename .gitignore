@@ -63,7 +63,7 @@ tasks/
 run_summaries/
 
 # Rust build artifacts of the instance generator
-tools/jss-instance-gen/target/
+dissertation/tools/jss-instance-gen/target/
 
 # The dissertation workspace is local-only and never tracked: writing material,
 # drafts, reference papers, spreadsheets, and the instance study. Analysis
@@ -77,5 +77,21 @@ Dissertation Project/
 *.xls
 fjsp_twt_results.zip
 # ...but instance manifests are provenance (they record each instance's seed)
-!benchmarks/math/fjsp_twt/instances/*/manifest.csv
-!tools/jss-instance-gen/instances/manifest.csv
+!benchmarks/math/fjsp_twt_insertion/instances/*/manifest.csv
+!dissertation/tools/jss-instance-gen/instances/manifest.csv
+
+# Generator output: byte-identical duplicates of benchmarks/math/*/instances/,
+# written wherever the generator was run. Only the manifests are provenance.
+dissertation/tools/jss-instance-gen/instances/
+dissertation/tools/jss-instance-gen/instances_*/
+dissertation/tools/jss-instance-gen/type*instances/
+!dissertation/tools/jss-instance-gen/instances/manifest.csv
+
+# Scratch analysis scripts and run-queue control kept local to this machine
+/tools/
+queue/
+queue_status.sh
+
+# Per-program evaluation caches: keyed by the program's absolute path, so they
+# resolve only on the machine that produced them.
+.academic_results_*.json
