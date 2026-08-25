@@ -95,3 +95,8 @@ queue_status.sh
 # Per-program evaluation caches: keyed by the program's absolute path, so they
 # resolve only on the machine that produced them.
 .academic_results_*.json
+
+# Local analysis output and working notes
+results/
+docs/EXPERIMENT_PLAN.md
+docs/ADAEVOLVE_EXPERIMENTS.md
