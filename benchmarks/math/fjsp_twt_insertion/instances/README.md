@@ -38,9 +38,6 @@ and the seed range below.
 | `type_a_search/` | 50 | 0–49 | the first 50 of `generated/`, byte for byte |
 | `type_b_search/` | 50 | 150–199 | |
 | `type_c_search/` | 50 | 250–299 | |
-| `type_a_heldout/` | 50 | 100–149 | |
-| `type_b_heldout/` | 50 | 200–249 | |
-| `type_c_heldout/` | 50 | 300–349 | |
 | `type_a_extra/` | 200 | 1000–1199 | generated after the runs finished |
 | `type_b_extra/` | 200 | 2000–2199 | |
 | `type_c_extra/` | 200 | 3000–3199 | |

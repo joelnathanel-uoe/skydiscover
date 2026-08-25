@@ -28,14 +28,12 @@ from evaluator_generalise import (  # noqa: E402
     validate_schedule, SUBPROCESS_FALLBACK_S, MAX_WORKERS,
 )
 
-REFERENCE = os.path.join(
-    ROOT, '..', 'dissertation-workspace', 'results', 'programs', 'p2',
-    'p2D_champ_2438e6be.py')
-REFERENCE = os.path.normpath(REFERENCE)
+REFERENCE = os.path.normpath(os.path.join(
+    ROOT, 'dissertation', 'programs', '07_phase2_run3_riskpricing.py'))
 
 DIRS = os.environ.get('RP_DIRS', '').split(',') if os.environ.get('RP_DIRS') else [
     'type_a_search', 'type_b_search', 'type_c_search',
-    'type_a_heldout', 'type_b_heldout', 'type_c_heldout']
+    'type_a_extra', 'type_b_extra', 'type_c_extra']
 
 
 def twt_for(path):

@@ -30,7 +30,6 @@ use:
 instances/generated/                     the generated instances runs are scored on
 instances/test/                          held-out generated instances
 instances/type_{a,b,c}_search/           50 each, three instance types
-instances/type_{a,b,c}_heldout/          50 each, unseen during search
 instances/type_{a,b,c}_extra/            200 each, generated after the runs
 instances/Set_1 .. Set_4/                the academic sets of Sobeyko and Mönch (2016)
 .cs_baselines.pkl                        cached combined-scheduler baselines

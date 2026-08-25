@@ -1,10 +1,9 @@
-"""Build the CS baseline cache for each of the six type/split instance directories.
+"""Build the CS baseline cache for each of the three type instance directories.
 
-Type A is a KEY REWRITE, not a recomputation: type_a_search and type_a_heldout
-hold files byte-identical to generated/000-049 and test/ respectively, so their
-baselines are copied from the existing caches with the path keys rewritten. That
-keeps every number already reported in Ch4 and Ch5 provably the same value
-rather than a recomputed one.
+Type A is a KEY REWRITE, not a recomputation: type_a_search holds files
+byte-identical to generated/000-049, so its baselines are copied from the
+existing cache with the path keys rewritten. That keeps every number already
+reported provably the same value rather than a recomputed one.
 
 Type B and Type C are built from scratch with baselines.cs_solve, the same
 best-of-78-classical-rules baseline used everywhere else.
@@ -75,8 +74,6 @@ if __name__ == '__main__':
     workers = int(sys.argv[1]) if len(sys.argv) > 1 else 14
 
     rewrite('type_a_search', os.path.join(PHASE1, '.cs_baselines.pkl'), 'generated')
-    rewrite('type_a_heldout',
-            os.path.join(INST, 'test', '.cs_baselines_test.pkl'), 'test')
 
-    for d in ('type_b_search', 'type_b_heldout', 'type_c_search', 'type_c_heldout'):
+    for d in ('type_b_search', 'type_c_search'):
         build(d, workers)
